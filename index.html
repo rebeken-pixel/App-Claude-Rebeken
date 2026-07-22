@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Buscador de Libros · Google Books</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="app__header">
+      <h1>📚 Buscador de Libros</h1>
+      <p class="app__subtitle">Encontrá la portada y la sinopsis de cualquier libro usando Google Books</p>
+    </header>
+
+    <form id="search-form" class="search-form" autocomplete="off">
+      <div class="search-form__field">
+        <label for="title">Título del libro</label>
+        <input type="text" id="title" name="title" placeholder="Ej: Cien años de soledad" />
+      </div>
+      <div class="search-form__field">
+        <label for="author">Autor</label>
+        <input type="text" id="author" name="author" placeholder="Ej: Gabriel García Márquez" />
+      </div>
+      <button type="submit" class="btn btn--primary" id="search-btn">Buscar</button>
+    </form>
+
+    <p id="error-message" class="error-message" hidden></p>
+
+    <section id="result" class="result" hidden>
+      <div class="result__cover">
+        <img id="cover-img" alt="Portada del libro" />
+        <button type="button" id="download-btn" class="btn btn--secondary">⬇️ Descargar portada</button>
+      </div>
+      <div class="result__info">
+        <h2 id="book-title"></h2>
+        <p id="book-authors" class="book-authors"></p>
+        <p id="book-meta" class="book-meta"></p>
+        <div class="synopsis">
+          <div class="synopsis__header">
+            <h3>Sinopsis</h3>
+            <button type="button" id="copy-btn" class="btn btn--secondary">📋 Copiar sinopsis</button>
+          </div>
+          <p id="book-synopsis"></p>
+        </div>
+      </div>
+    </section>
+
+    <p id="copy-feedback" class="feedback" hidden></p>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
