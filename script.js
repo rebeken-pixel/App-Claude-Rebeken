@@ -12,6 +12,7 @@ const bookAuthors = document.getElementById("book-authors");
 const bookMeta = document.getElementById("book-meta");
 const bookSynopsis = document.getElementById("book-synopsis");
 const copyFeedback = document.getElementById("copy-feedback");
+const emptyState = document.getElementById("empty-state");
 
 const PLACEHOLDER_COVER =
   "data:image/svg+xml;utf8," +
@@ -36,6 +37,7 @@ form.addEventListener("submit", async (event) => {
 
   setLoading(true);
   result.hidden = true;
+  emptyState.hidden = true;
 
   try {
     const book = await searchBook(title, author);
