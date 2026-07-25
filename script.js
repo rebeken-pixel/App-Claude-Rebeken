@@ -59,7 +59,7 @@ async function searchBook(title, author) {
   if (title) terms.push(`intitle:${title}`);
   if (author) terms.push(`inauthor:${author}`);
   const query = encodeURIComponent(terms.join("+"));
-  const url = `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=1&key=${GOOGLE_BOOKS_API_KEY}`;
+  const url = `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=5&key=${GOOGLE_BOOKS_API_KEY}`;
 
   const response = await fetch(url);
   if (!response.ok) {
@@ -69,7 +69,18 @@ async function searchBook(title, author) {
   if (!data.items || data.items.length === 0) {
     return null;
   }
-  return data.items[0].volumeInfo;
+
+  const [best, ...rest] = data.items;
+  const volumeInfo = { ...best.volumeInfo };
+
+  if (!volumeInfo.imageLinks) {
+    const withCover = rest.find((item) => item.volumeInfo && item.volumeInfo.imageLinks);
+    if (withCover) {
+      volumeInfo.imageLinks = withCover.volumeInfo.imageLinks;
+    }
+  }
+
+  return volumeInfo;
 }
 
 function renderBook(volumeInfo) {
