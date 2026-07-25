@@ -80,6 +80,10 @@ async function searchBook(title, author) {
     }
   }
 
+  if (!volumeInfo.imageLinks && best.id) {
+    volumeInfo.fallbackCoverUrl = `https://books.google.com/books/content?id=${best.id}&printsec=frontcover&img=1&zoom=1&source=gbs_api`;
+  }
+
   return volumeInfo;
 }
 
@@ -102,9 +106,16 @@ function renderBook(volumeInfo) {
     imageLinks.small ||
     imageLinks.thumbnail ||
     imageLinks.smallThumbnail ||
+    volumeInfo.fallbackCoverUrl ||
     null;
 
   currentCoverUrl = coverUrl ? coverUrl.replace(/^http:/, "https:") : null;
+  coverImg.onerror = () => {
+    coverImg.onerror = null;
+    currentCoverUrl = null;
+    coverImg.src = PLACEHOLDER_COVER;
+    downloadBtn.disabled = true;
+  };
   coverImg.src = currentCoverUrl || PLACEHOLDER_COVER;
   coverImg.alt = `Portada de ${volumeInfo.title || "libro"}`;
   downloadBtn.disabled = !currentCoverUrl;
