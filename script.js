@@ -13,6 +13,8 @@ const bookMeta = document.getElementById("book-meta");
 const bookSynopsis = document.getElementById("book-synopsis");
 const copyFeedback = document.getElementById("copy-feedback");
 
+const GOOGLE_BOOKS_API_KEY = "AIzaSyA4Fq0frKB4VcsAAcSoktDM_DUWMC8UO90";
+
 const PLACEHOLDER_COVER =
   "data:image/svg+xml;utf8," +
   encodeURIComponent(
@@ -57,7 +59,7 @@ async function searchBook(title, author) {
   if (title) terms.push(`intitle:${title}`);
   if (author) terms.push(`inauthor:${author}`);
   const query = encodeURIComponent(terms.join("+"));
-  const url = `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=1`;
+  const url = `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=1&key=${GOOGLE_BOOKS_API_KEY}`;
 
   const response = await fetch(url);
   if (!response.ok) {
