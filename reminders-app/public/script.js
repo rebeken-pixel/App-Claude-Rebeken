@@ -42,6 +42,9 @@ async function loadReminders() {
 
     if (data.icloud.ok) {
       items.push(...data.icloud.items);
+      if (data.icloud.warnings && data.icloud.warnings.length) {
+        errors.push(...data.icloud.warnings.map((warning) => `Reminders (iCloud) — ${warning}`));
+      }
     } else {
       errors.push(`Reminders (iCloud): ${data.icloud.error}`);
     }

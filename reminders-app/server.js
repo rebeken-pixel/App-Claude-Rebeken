@@ -24,7 +24,7 @@ app.get("/api/reminders", async (req, res) => {
         : { ok: false, error: todoist.reason.message },
     icloud:
       icloud.status === "fulfilled"
-        ? { ok: true, items: icloud.value }
+        ? { ok: true, items: icloud.value.items, warnings: icloud.value.errors }
         : { ok: false, error: icloud.reason.message },
   });
 });

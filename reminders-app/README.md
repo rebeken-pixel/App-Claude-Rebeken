@@ -41,13 +41,26 @@ npm install
 cp .env.example .env
 ```
 
-Editá `.env` y completá:
+Editá `.env` y completá, para una sola cuenta de iCloud:
 
 ```
 TODOIST_API_TOKEN=tu_token_de_todoist
 ICLOUD_APPLE_ID=tu_correo@icloud.com
 ICLOUD_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
 ```
+
+O, para combinar **varias cuentas de iCloud** (ej. personal + trabajo), usá
+`ICLOUD_ACCOUNTS` en su lugar (tiene prioridad sobre `ICLOUD_APPLE_ID` /
+`ICLOUD_APP_PASSWORD` si está definida):
+
+```
+TODOIST_API_TOKEN=tu_token_de_todoist
+ICLOUD_ACCOUNTS=personal@icloud.com:xxxx-xxxx-xxxx-xxxx,trabajo@icloud.com:yyyy-yyyy-yyyy-yyyy
+```
+
+Cada cuenta necesita su propia contraseña de app (repetí el paso anterior una
+vez por Apple ID). Los recordatorios de cada cuenta se muestran identificados
+con su nombre de usuario en el nombre de la lista (ej. "personal · Hogar").
 
 El archivo `.env` está en `.gitignore`: nunca se sube al repositorio.
 
@@ -61,13 +74,13 @@ Abrí [http://localhost:3000](http://localhost:3000) en el navegador.
 
 ## Funcionalidad
 
-- Lista combinada de tareas de Todoist y recordatorios de Reminders,
-  ordenada por fecha de vencimiento.
+- Lista combinada de tareas de Todoist y recordatorios de Reminders (de una o
+  varias cuentas de iCloud), ordenada por fecha de vencimiento.
 - Filtros por fuente (Todoist / Reminders / Todos).
 - Opción para ocultar recordatorios completados.
-- Botón de actualizar para volver a consultar ambas fuentes.
-- Si una de las dos fuentes falla (ej. credenciales inválidas), la otra se
-  sigue mostrando y se indica el error correspondiente.
+- Botón de actualizar para volver a consultar todas las fuentes.
+- Si una fuente o cuenta falla (ej. credenciales inválidas), las demás se
+  siguen mostrando y se indica el error correspondiente.
 
 ## Notas de seguridad
 
