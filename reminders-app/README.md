@@ -100,9 +100,44 @@ Abrí [http://localhost:3000](http://localhost:3000) en el navegador.
   así que reiniciar el servidor (o que un hosting como Render lo duerma y
   despierte) no rompe la posibilidad de marcarlos como completados.
 
+## Desplegar en Render (gratis)
+
+Si querés acceder desde el celular sin dejar tu computadora prendida, podés
+alojar este mismo servidor en [Render](https://render.com), que tiene un
+plan gratuito.
+
+1. Subí este repositorio a GitHub (ya lo está) e iniciá sesión en Render con
+   tu cuenta de GitHub.
+2. **New +** → **Web Service** → elegí el repositorio `App-Claude-Rebeken`.
+3. Configurá:
+   - **Root Directory**: `reminders-app` (la app vive en una subcarpeta del repo).
+   - **Runtime**: Node.
+   - **Build Command**: `npm install`
+   - **Start Command**: `npm start`
+   - **Instance Type**: Free.
+4. En la sección **Environment Variables**, agregá las mismas variables que
+   tenés en tu `.env` local: `TODOIST_API_TOKEN`, `ICLOUD_APPLE_ID` /
+   `ICLOUD_APP_PASSWORD` (o `ICLOUD_ACCOUNTS`), y **además** `APP_USERNAME` /
+   `APP_PASSWORD` (ver sección de abajo — son obligatorias para no dejar la
+   app abierta a cualquiera en internet). No hace falta poner `PORT`: Render
+   lo define solo.
+5. **Create Web Service**. Render instala, arranca, y te da una URL pública
+   tipo `https://recordatorios-unificados.onrender.com`.
+6. Desde el celular, abrí esa URL en el navegador, iniciá sesión con el
+   usuario/contraseña que configuraste, y usá "Agregar a pantalla de inicio"
+   para tener un ícono como el de una app.
+
+El plan gratis "duerme" el servicio tras ~15 minutos sin uso; la primera
+vez que lo abrís después de eso tarda unos 30-50 segundos en responder,
+después anda normal. Cada vez que se hace `git push` a `main`, Render
+vuelve a desplegar automáticamente.
+
 ## Notas de seguridad
 
-Esta app está pensada para correr **localmente, para uso personal**. El
-servidor no tiene autenticación propia: si lo exponés en una red pública o
-lo desplegás en un servicio en la nube, cualquiera que acceda a la URL vería
-tus recordatorios. No subas tu archivo `.env` ni compartas tus tokens.
+Esta app corre sin autenticación **por defecto**, pensada para uso local en
+tu propia compu. Si la desplegás en un hosting público (Render u otro),
+**configurá `APP_USERNAME` y `APP_PASSWORD`** en las variables de entorno:
+sin esas dos, cualquiera que encuentre la URL vería (y podría modificar) tus
+recordatorios. Con ellas configuradas, el navegador te va a pedir usuario y
+contraseña antes de mostrar nada. No subas tu archivo `.env` ni compartas
+tus tokens o esas credenciales.
