@@ -3,8 +3,18 @@ require("dotenv").config();
 const express = require("express");
 const path = require("path");
 
-const { getTodoistTasks, setTodoistTaskCompleted } = require("./src/todoist");
-const { getIcloudReminders, setIcloudReminderCompleted } = require("./src/icloudReminders");
+const {
+  getTodoistTasks,
+  setTodoistTaskCompleted,
+  getTodoistProjects,
+  createTodoistTask,
+} = require("./src/todoist");
+const {
+  getIcloudReminders,
+  setIcloudReminderCompleted,
+  getIcloudReminderLists,
+  createIcloudReminder,
+} = require("./src/icloudReminders");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -46,6 +56,56 @@ app.post("/api/reminders/:id/complete", async (req, res) => {
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
+});
+
+app.get("/api/new-reminder-options", async (req, res) => {
+  const [todoistProjects, icloudLists] = await Promise.allSettled([
+    getTodoistProjects(),
+    getIcloudReminderLists(),
+  ]);
+
+  res.json({
+    todoistProjects: todoistProjects.status === "fulfilled" ? todoistProjects.value : [],
+    icloudLists: icloudLists.status === "fulfilled" ? icloudLists.value : [],
+  });
+});
+
+app.post("/api/reminders", async (req, res) => {
+  const { title, notes, due, targets } = req.body || {};
+
+  if (!title || !title.trim()) {
+    return res.status(400).json({ ok: false, error: "El título es obligatorio." });
+  }
+  if (!targets || (!targets.todoist && !targets.icloudListId)) {
+    return res
+      .status(400)
+      .json({ ok: false, error: "Elegí al menos un destino (Todoist y/o Reminders)." });
+  }
+
+  const requestedCount = (targets.todoist ? 1 : 0) + (targets.icloudListId ? 1 : 0);
+  const errors = [];
+
+  if (targets.todoist) {
+    try {
+      await createTodoistTask({ title, notes, due, projectId: targets.todoistProjectId });
+    } catch (err) {
+      errors.push(`Todoist: ${err.message}`);
+    }
+  }
+
+  if (targets.icloudListId) {
+    try {
+      await createIcloudReminder({ listId: targets.icloudListId, title, notes, due });
+    } catch (err) {
+      errors.push(`Reminders (iCloud): ${err.message}`);
+    }
+  }
+
+  if (errors.length === requestedCount) {
+    return res.status(500).json({ ok: false, error: errors.join(" · ") });
+  }
+
+  res.json({ ok: true, warnings: errors });
 });
 
 app.listen(PORT, () => {

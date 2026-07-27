@@ -6,6 +6,21 @@ const ICAL = require("ical.js");
 // de CalDAV. Se repuebla en cada GET /api/reminders.
 const objectCache = new Map();
 
+// Recuerda a qué cuenta/URL de CalDAV corresponde cada lista de Reminders
+// ofrecida en el formulario de "nuevo recordatorio". Se repuebla cada vez
+// que se piden las listas disponibles.
+const listCache = new Map();
+let listIdCounter = 0;
+
+function buildClient(account) {
+  return new DAVClient({
+    serverUrl: "https://caldav.icloud.com",
+    credentials: account,
+    authMethod: "Basic",
+    defaultAccountType: "caldav",
+  });
+}
+
 function parseAccounts() {
   const raw = process.env.ICLOUD_ACCOUNTS;
 
@@ -29,13 +44,9 @@ function parseAccounts() {
   return [];
 }
 
-async function fetchAccountReminders({ username, password }) {
-  const client = new DAVClient({
-    serverUrl: "https://caldav.icloud.com",
-    credentials: { username, password },
-    authMethod: "Basic",
-    defaultAccountType: "caldav",
-  });
+async function fetchAccountReminders(account) {
+  const { username } = account;
+  const client = buildClient(account);
 
   await client.login();
 
@@ -146,12 +157,7 @@ async function setIcloudReminderCompleted(id, completed) {
     throw new Error(`La cuenta ${cached.username} ya no está configurada en .env.`);
   }
 
-  const client = new DAVClient({
-    serverUrl: "https://caldav.icloud.com",
-    credentials: account,
-    authMethod: "Basic",
-    defaultAccountType: "caldav",
-  });
+  const client = buildClient(account);
   await client.login();
 
   const jcalData = ICAL.parse(cached.data);
@@ -177,4 +183,86 @@ async function setIcloudReminderCompleted(id, completed) {
   cached.data = updatedData;
 }
 
-module.exports = { getIcloudReminders, setIcloudReminderCompleted };
+async function getIcloudReminderLists() {
+  const accounts = parseAccounts();
+  if (accounts.length === 0) return [];
+
+  const results = await Promise.allSettled(
+    accounts.map(async (account) => {
+      const client = buildClient(account);
+      await client.login();
+      const calendars = await client.fetchCalendars();
+      return calendars
+        .filter((calendar) => (calendar.components || []).includes("VTODO"))
+        .map((calendar) => ({
+          username: account.username,
+          url: calendar.url,
+          displayName: calendar.displayName || "Recordatorios",
+        }));
+    })
+  );
+
+  listCache.clear();
+  const lists = [];
+
+  results.forEach((result) => {
+    if (result.status !== "fulfilled") return;
+    for (const list of result.value) {
+      const id = `list-${listIdCounter++}`;
+      listCache.set(id, list);
+      lists.push({ id, label: `${list.username.split("@")[0]} · ${list.displayName}` });
+    }
+  });
+
+  return lists;
+}
+
+async function createIcloudReminder({ listId, title, notes, due }) {
+  const list = listCache.get(listId);
+  if (!list) {
+    throw new Error(
+      "Esa lista de Reminders ya no está disponible; volvé a abrir el formulario e intentá de nuevo."
+    );
+  }
+
+  const account = parseAccounts().find((acc) => acc.username === list.username);
+  if (!account) {
+    throw new Error(`La cuenta ${list.username} ya no está configurada en .env.`);
+  }
+
+  const client = buildClient(account);
+  await client.login();
+
+  const uid = `${Date.now()}-${Math.random().toString(36).slice(2)}@recordatorios-unificados`;
+
+  const vcalendar = new ICAL.Component("vcalendar");
+  vcalendar.updatePropertyWithValue("prodid", "-//Recordatorios Unificados//ES");
+  vcalendar.updatePropertyWithValue("version", "2.0");
+
+  const vtodo = new ICAL.Component("vtodo");
+  vtodo.updatePropertyWithValue("uid", uid);
+  vtodo.updatePropertyWithValue("summary", title);
+  vtodo.updatePropertyWithValue("dtstamp", ICAL.Time.now());
+  if (notes) {
+    vtodo.updatePropertyWithValue("description", notes);
+  }
+  if (due) {
+    const dueTime = ICAL.Time.fromJSDate(new Date(due), false);
+    dueTime.isDate = true;
+    vtodo.updatePropertyWithValue("due", dueTime);
+  }
+  vcalendar.addSubcomponent(vtodo);
+
+  await client.createCalendarObject({
+    calendar: { url: list.url },
+    iCalString: vcalendar.toString(),
+    filename: `${uid}.ics`,
+  });
+}
+
+module.exports = {
+  getIcloudReminders,
+  setIcloudReminderCompleted,
+  getIcloudReminderLists,
+  createIcloudReminder,
+};
