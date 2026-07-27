@@ -1,4 +1,27 @@
-const API_BASE = "https://api.todoist.com/rest/v2";
+const API_BASE = "https://api.todoist.com/api/v1";
+
+async function fetchAllPages(path, headers) {
+  const results = [];
+  let cursor = null;
+
+  do {
+    const url = new URL(`${API_BASE}/${path}`);
+    if (cursor) {
+      url.searchParams.set("cursor", cursor);
+    }
+
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+      throw new Error(`Todoist respondió con estado ${response.status} al pedir ${path}.`);
+    }
+
+    const data = await response.json();
+    results.push(...data.results);
+    cursor = data.next_cursor;
+  } while (cursor);
+
+  return results;
+}
 
 async function getTodoistTasks() {
   const token = process.env.TODOIST_API_TOKEN;
@@ -10,20 +33,11 @@ async function getTodoistTasks() {
 
   const headers = { Authorization: `Bearer ${token}` };
 
-  const [tasksRes, projectsRes] = await Promise.all([
-    fetch(`${API_BASE}/tasks`, { headers }),
-    fetch(`${API_BASE}/projects`, { headers }),
+  const [tasks, projects] = await Promise.all([
+    fetchAllPages("tasks", headers),
+    fetchAllPages("projects", headers),
   ]);
 
-  if (!tasksRes.ok) {
-    throw new Error(`Todoist respondió con estado ${tasksRes.status} al pedir tareas.`);
-  }
-  if (!projectsRes.ok) {
-    throw new Error(`Todoist respondió con estado ${projectsRes.status} al pedir proyectos.`);
-  }
-
-  const tasks = await tasksRes.json();
-  const projects = await projectsRes.json();
   const projectNameById = new Map(projects.map((project) => [project.id, project.name]));
 
   return tasks.map((task) => ({
