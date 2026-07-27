@@ -1,0 +1,215 @@
+:root {
+  --color-bg: #f4f1ea;
+  --color-surface: #ffffff;
+  --color-primary: #5b3a29;
+  --color-primary-dark: #402a1d;
+  --color-accent: #c47f3d;
+  --color-text: #2c2420;
+  --color-text-muted: #6b5f56;
+  --color-border: #e3dccf;
+  --color-error: #b3261e;
+  --color-todoist: #e44332;
+  --color-icloud: #147efb;
+  --radius: 12px;
+  --shadow: 0 4px 16px rgba(44, 36, 32, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Georgia", "Iowan Old Style", serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  min-height: 100vh;
+  padding: 32px 16px 64px;
+}
+
+.app {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.app__header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.app__header h1 {
+  margin: 0 0 8px;
+  font-size: 2.2rem;
+}
+
+.app__subtitle {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 1rem;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+
+.toolbar__filters {
+  display: flex;
+  gap: 8px;
+}
+
+.chip {
+  font-family: inherit;
+  font-size: 0.85rem;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.chip--active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+.toolbar__toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin-left: auto;
+}
+
+.btn {
+  font-family: inherit;
+  font-size: 0.95rem;
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.05s ease;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn--secondary {
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+
+.btn--secondary:hover {
+  background: rgba(91, 58, 41, 0.08);
+}
+
+.status-message {
+  margin: 0 0 20px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: #fbe9e7;
+  color: var(--color-error);
+  border: 1px solid #f1c4bd;
+}
+
+.status-message--info {
+  background: #eaf2ff;
+  color: #1d4ed8;
+  border-color: #c7dbff;
+}
+
+.reminders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reminder-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px 20px;
+}
+
+.reminder-card--completed {
+  opacity: 0.55;
+}
+
+.reminder-card--completed .reminder-card__title {
+  text-decoration: line-through;
+}
+
+.reminder-card__source {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 6px;
+}
+
+.reminder-card__source--todoist {
+  background: var(--color-todoist);
+}
+
+.reminder-card__source--icloud {
+  background: var(--color-icloud);
+}
+
+.reminder-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.reminder-card__title {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+}
+
+.reminder-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.reminder-card__badge {
+  font-family: sans-serif;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: #fff;
+}
+
+.reminder-card__badge--todoist {
+  background: var(--color-todoist);
+}
+
+.reminder-card__badge--icloud {
+  background: var(--color-icloud);
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--color-text-muted);
+  padding: 48px 16px;
+}

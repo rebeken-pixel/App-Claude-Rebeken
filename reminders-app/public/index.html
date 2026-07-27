@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recordatorios Unificados</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="app__header">
+      <h1>🔔 Recordatorios Unificados</h1>
+      <p class="app__subtitle">Todoist y Apple Reminders en un solo lugar</p>
+    </header>
+
+    <div class="toolbar">
+      <div class="toolbar__filters" role="group" aria-label="Filtrar por fuente">
+        <button type="button" class="chip chip--active" data-filter="all">Todos</button>
+        <button type="button" class="chip" data-filter="todoist">Todoist</button>
+        <button type="button" class="chip" data-filter="icloud">Reminders</button>
+      </div>
+      <label class="toolbar__toggle">
+        <input type="checkbox" id="hide-completed" checked />
+        Ocultar completados
+      </label>
+      <button type="button" id="refresh-btn" class="btn btn--secondary">🔄 Actualizar</button>
+    </div>
+
+    <p id="status-message" class="status-message" hidden></p>
+
+    <section id="list" class="reminders-list"></section>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
