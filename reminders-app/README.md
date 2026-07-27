@@ -75,7 +75,9 @@ Abrí [http://localhost:3000](http://localhost:3000) en el navegador.
 ## Funcionalidad
 
 - Lista combinada de tareas de Todoist y recordatorios de Reminders (de una o
-  varias cuentas de iCloud), ordenada por fecha de vencimiento.
+  varias cuentas de iCloud), agrupada por fecha: **Vencidos, Hoy, Mañana,
+  Esta semana, Más adelante y Sin fecha** (en ese orden), y ordenada por
+  fecha dentro de cada grupo.
 - Filtros por fuente (Todoist / Reminders / Todos).
 - Opción para ocultar recordatorios completados.
 - Botón de actualizar para volver a consultar todas las fuentes.
