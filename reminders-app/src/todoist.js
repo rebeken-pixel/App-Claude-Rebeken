@@ -24,14 +24,7 @@ async function fetchAllPages(path, headers) {
 }
 
 async function getTodoistTasks() {
-  const token = process.env.TODOIST_API_TOKEN;
-  if (!token) {
-    throw new Error(
-      "Falta TODOIST_API_TOKEN en el archivo .env (Configuración > Integraciones > Desarrollador en Todoist)."
-    );
-  }
-
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = { Authorization: `Bearer ${getToken()}` };
 
   const [tasks, projects] = await Promise.all([
     fetchAllPages("tasks", headers),
@@ -55,4 +48,28 @@ async function getTodoistTasks() {
   }));
 }
 
-module.exports = { getTodoistTasks };
+function getToken() {
+  const token = process.env.TODOIST_API_TOKEN;
+  if (!token) {
+    throw new Error(
+      "Falta TODOIST_API_TOKEN en el archivo .env (Configuración > Integraciones > Desarrollador en Todoist)."
+    );
+  }
+  return token;
+}
+
+async function setTodoistTaskCompleted(taskId, completed) {
+  const token = getToken();
+  const action = completed ? "close" : "reopen";
+
+  const response = await fetch(`${API_BASE}/tasks/${taskId}/${action}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Todoist respondió con estado ${response.status} al marcar la tarea.`);
+  }
+}
+
+module.exports = { getTodoistTasks, setTodoistTaskCompleted };

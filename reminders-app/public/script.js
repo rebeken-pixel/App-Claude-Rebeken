@@ -99,6 +99,14 @@ function buildCard(item) {
   const card = document.createElement("article");
   card.className = `reminder-card${item.completed ? " reminder-card--completed" : ""}`;
 
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.className = "reminder-card__checkbox";
+  checkbox.checked = item.completed;
+  checkbox.title = item.completed ? "Marcar como pendiente" : "Marcar como completado";
+  checkbox.addEventListener("change", () => toggleCompleted(item, checkbox));
+  card.appendChild(checkbox);
+
   const dot = document.createElement("span");
   dot.className = `reminder-card__source reminder-card__source--${item.source}`;
   card.appendChild(dot);
@@ -136,6 +144,33 @@ function buildCard(item) {
   body.appendChild(meta);
   card.appendChild(body);
   return card;
+}
+
+async function toggleCompleted(item, checkbox) {
+  const newValue = checkbox.checked;
+  checkbox.disabled = true;
+
+  try {
+    const response = await fetch(`/api/reminders/${encodeURIComponent(item.id)}/complete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ completed: newValue }),
+    });
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      throw new Error(data.error || `El servidor respondió con estado ${response.status}`);
+    }
+
+    item.completed = newValue;
+    render();
+  } catch (err) {
+    console.error(err);
+    checkbox.checked = !newValue;
+    showStatus(`No se pudo actualizar "${item.title}": ${err.message}`, "error");
+  } finally {
+    checkbox.disabled = false;
+  }
 }
 
 function formatDate(isoString, isAllDay) {

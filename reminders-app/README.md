@@ -79,8 +79,20 @@ Abrí [http://localhost:3000](http://localhost:3000) en el navegador.
 - Filtros por fuente (Todoist / Reminders / Todos).
 - Opción para ocultar recordatorios completados.
 - Botón de actualizar para volver a consultar todas las fuentes.
+- Casillero para marcar un recordatorio como completado (o reabrirlo) desde
+  la lista unificada — el cambio se sincroniza con Todoist o iCloud según
+  corresponda, no es solo visual.
 - Si una fuente o cuenta falla (ej. credenciales inválidas), las demás se
   siguen mostrando y se indica el error correspondiente.
+
+## Notas sobre completar recordatorios
+
+- En Todoist, completar una tarea **recurrente** programa su próxima
+  ocurrencia (es el comportamiento normal de Todoist), no la borra.
+- Para los recordatorios de iCloud, la app necesita haber cargado la lista
+  al menos una vez (recargando la página) antes de poder marcarlos como
+  completados — si reiniciás el servidor y probás marcar uno sin recargar
+  antes, vas a ver un error pidiéndote que actualices la página.
 
 ## Notas de seguridad
 
