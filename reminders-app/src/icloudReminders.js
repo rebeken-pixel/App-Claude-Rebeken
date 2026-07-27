@@ -43,7 +43,17 @@ async function fetchAccountReminders({ username, password }) {
   const reminders = [];
 
   for (const list of reminderLists) {
-    const objects = await client.fetchCalendarObjects({ calendar: list });
+    const objects = await client.fetchCalendarObjects({
+      calendar: list,
+      filters: [
+        {
+          "comp-filter": {
+            _attributes: { name: "VCALENDAR" },
+            "comp-filter": { _attributes: { name: "VTODO" } },
+          },
+        },
+      ],
+    });
 
     for (const object of objects) {
       if (!object.data) continue;
