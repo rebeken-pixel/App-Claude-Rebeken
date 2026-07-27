@@ -68,6 +68,30 @@
       </div>
     </form>
 
+    <form id="edit-reminder-form" class="new-reminder-form" hidden>
+      <div class="new-reminder-form__field">
+        <label for="edit-title">Título</label>
+        <input type="text" id="edit-title" required />
+      </div>
+
+      <div class="new-reminder-form__field">
+        <label for="edit-notes">Notas (opcional)</label>
+        <textarea id="edit-notes" rows="2"></textarea>
+      </div>
+
+      <div class="new-reminder-form__field">
+        <label for="edit-due">Fecha (opcional)</label>
+        <input type="date" id="edit-due" />
+      </div>
+
+      <p id="edit-reminder-error" class="status-message" hidden></p>
+
+      <div class="new-reminder-form__actions">
+        <button type="submit" class="btn btn--primary" id="edit-reminder-submit">Guardar cambios</button>
+        <button type="button" class="btn btn--secondary" id="edit-reminder-cancel">Cancelar</button>
+      </div>
+    </form>
+
     <p id="status-message" class="status-message" hidden></p>
 
     <section id="list" class="reminders-list"></section>

@@ -9,12 +9,14 @@ const {
   setTodoistTaskCompleted,
   getTodoistProjects,
   createTodoistTask,
+  updateTodoistTask,
 } = require("./src/todoist");
 const {
   getIcloudReminders,
   setIcloudReminderCompleted,
   getIcloudReminderLists,
   createIcloudReminder,
+  updateIcloudReminder,
 } = require("./src/icloudReminders");
 
 const app = express();
@@ -85,6 +87,28 @@ app.post("/api/reminders/:id/complete", async (req, res) => {
       await setTodoistTaskCompleted(id.slice("todoist-".length), completed);
     } else if (id.startsWith("icloud-")) {
       await setIcloudReminderCompleted(req.body?.syncToken, completed);
+    } else {
+      return res.status(404).json({ ok: false, error: "Recordatorio desconocido." });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+app.put("/api/reminders/:id", async (req, res) => {
+  const { id } = req.params;
+  const { title, notes, due, syncToken } = req.body || {};
+
+  if (title !== undefined && !title.trim()) {
+    return res.status(400).json({ ok: false, error: "El título no puede quedar vacío." });
+  }
+
+  try {
+    if (id.startsWith("todoist-")) {
+      await updateTodoistTask(id.slice("todoist-".length), { title, notes, due });
+    } else if (id.startsWith("icloud-")) {
+      await updateIcloudReminder(syncToken, { title, notes, due });
     } else {
       return res.status(404).json({ ok: false, error: "Recordatorio desconocido." });
     }

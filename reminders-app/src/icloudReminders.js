@@ -200,6 +200,61 @@ async function setIcloudReminderCompleted(syncToken, completed) {
   });
 }
 
+async function updateIcloudReminder(syncToken, { title, notes, due }) {
+  if (!syncToken) {
+    throw new Error("Falta el token del recordatorio; actualizá la página e intentá de nuevo.");
+  }
+
+  const { username, calendarUrl, objectUrl } = decodeToken(syncToken);
+  const account = findAccount(username);
+
+  const client = buildClient(account);
+  await client.login();
+
+  const [object] = await client.fetchCalendarObjects({
+    calendar: { url: calendarUrl },
+    objectUrls: [objectUrl],
+  });
+
+  if (!object || !object.data) {
+    throw new Error(
+      "No se encontró ese recordatorio en iCloud; puede que ya no exista. Actualizá la página."
+    );
+  }
+
+  const jcalData = ICAL.parse(object.data);
+  const component = new ICAL.Component(jcalData);
+  const vtodo = component.getFirstSubcomponent("vtodo");
+
+  if (title !== undefined) {
+    vtodo.updatePropertyWithValue("summary", title);
+  }
+
+  if (notes !== undefined) {
+    if (notes) {
+      vtodo.updatePropertyWithValue("description", notes);
+    } else {
+      vtodo.removeProperty("description");
+    }
+  }
+
+  if (due !== undefined) {
+    if (due) {
+      const dueTime = ICAL.Time.fromJSDate(new Date(due), false);
+      dueTime.isDate = true;
+      vtodo.updatePropertyWithValue("due", dueTime);
+    } else {
+      vtodo.removeProperty("due");
+    }
+  }
+
+  const updatedData = component.toString();
+
+  await client.updateCalendarObject({
+    calendarObject: { url: object.url, etag: object.etag, data: updatedData },
+  });
+}
+
 async function getIcloudReminderLists() {
   const accounts = parseAccounts();
   if (accounts.length === 0) return [];
@@ -269,4 +324,5 @@ module.exports = {
   setIcloudReminderCompleted,
   getIcloudReminderLists,
   createIcloudReminder,
+  updateIcloudReminder,
 };
