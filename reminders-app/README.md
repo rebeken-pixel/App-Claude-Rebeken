@@ -84,6 +84,12 @@ Abrí [http://localhost:3000](http://localhost:3000) en el navegador.
   corresponda, no es solo visual.
 - Si una fuente o cuenta falla (ej. credenciales inválidas), las demás se
   siguen mostrando y se indica el error correspondiente.
+- Botón **"➕ Nuevo recordatorio"** para crear uno con título, notas y fecha
+  opcional, eligiendo si se crea en Todoist, en una lista de Reminders de
+  iCloud, o en ambos a la vez. Nota: el recordatorio se crea en cada destino
+  elegido en ese momento; no queda "enlazado" después — completarlo o editarlo
+  en un lado no afecta al otro (salvo el marcado de completado, que si se hace
+  desde esta app sí se sincroniza, como se explica abajo).
 
 ## Notas sobre completar recordatorios
 

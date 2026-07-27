@@ -4,8 +4,22 @@ const refreshBtn = document.getElementById("refresh-btn");
 const hideCompletedCheckbox = document.getElementById("hide-completed");
 const filterChips = document.querySelectorAll(".chip");
 
+const newReminderBtn = document.getElementById("new-reminder-btn");
+const newReminderForm = document.getElementById("new-reminder-form");
+const newReminderCancelBtn = document.getElementById("new-reminder-cancel");
+const newReminderSubmitBtn = document.getElementById("new-reminder-submit");
+const newReminderError = document.getElementById("new-reminder-error");
+const newTitleInput = document.getElementById("new-title");
+const newNotesInput = document.getElementById("new-notes");
+const newDueInput = document.getElementById("new-due");
+const targetTodoistCheckbox = document.getElementById("target-todoist");
+const targetIcloudCheckbox = document.getElementById("target-icloud");
+const todoistProjectSelect = document.getElementById("todoist-project");
+const icloudListSelect = document.getElementById("icloud-list");
+
 let allReminders = [];
 let activeFilter = "all";
+let newReminderOptionsLoaded = false;
 
 filterChips.forEach((chip) => {
   chip.addEventListener("click", () => {
@@ -18,6 +32,139 @@ filterChips.forEach((chip) => {
 
 hideCompletedCheckbox.addEventListener("change", render);
 refreshBtn.addEventListener("click", loadReminders);
+
+newReminderBtn.addEventListener("click", openNewReminderForm);
+newReminderCancelBtn.addEventListener("click", closeNewReminderForm);
+targetTodoistCheckbox.addEventListener("change", () => {
+  todoistProjectSelect.disabled = !targetTodoistCheckbox.checked;
+});
+targetIcloudCheckbox.addEventListener("change", () => {
+  icloudListSelect.disabled = !targetIcloudCheckbox.checked;
+});
+newReminderForm.addEventListener("submit", submitNewReminder);
+
+async function openNewReminderForm() {
+  newReminderForm.hidden = false;
+  newReminderBtn.hidden = true;
+  newTitleInput.focus();
+
+  if (newReminderOptionsLoaded) return;
+
+  try {
+    const response = await fetch("/api/new-reminder-options");
+    const data = await response.json();
+
+    todoistProjectSelect.innerHTML = "";
+    for (const project of data.todoistProjects) {
+      const option = document.createElement("option");
+      option.value = project.id;
+      option.textContent = project.name;
+      todoistProjectSelect.appendChild(option);
+    }
+    if (data.todoistProjects.length === 0) {
+      const option = document.createElement("option");
+      option.textContent = "Inbox (por defecto)";
+      todoistProjectSelect.appendChild(option);
+    }
+
+    icloudListSelect.innerHTML = "";
+    for (const list of data.icloudLists) {
+      const option = document.createElement("option");
+      option.value = list.id;
+      option.textContent = list.label;
+      icloudListSelect.appendChild(option);
+    }
+
+    if (data.icloudLists.length === 0) {
+      targetIcloudCheckbox.checked = false;
+      targetIcloudCheckbox.disabled = true;
+      icloudListSelect.disabled = true;
+    } else {
+      todoistProjectSelect.disabled = !targetTodoistCheckbox.checked;
+      icloudListSelect.disabled = !targetIcloudCheckbox.checked;
+    }
+
+    newReminderOptionsLoaded = true;
+  } catch (err) {
+    console.error(err);
+    showNewReminderError("No se pudieron cargar los proyectos/listas disponibles.");
+  }
+}
+
+function closeNewReminderForm() {
+  newReminderForm.hidden = true;
+  newReminderBtn.hidden = false;
+  newReminderForm.reset();
+  targetTodoistCheckbox.checked = true;
+  targetIcloudCheckbox.checked = !targetIcloudCheckbox.disabled;
+  hideNewReminderError();
+}
+
+async function submitNewReminder(event) {
+  event.preventDefault();
+  hideNewReminderError();
+
+  const title = newTitleInput.value.trim();
+  if (!title) {
+    showNewReminderError("El título es obligatorio.");
+    return;
+  }
+
+  if (!targetTodoistCheckbox.checked && !targetIcloudCheckbox.checked) {
+    showNewReminderError("Elegí al menos un destino (Todoist y/o Reminders).");
+    return;
+  }
+
+  const body = {
+    title,
+    notes: newNotesInput.value.trim(),
+    due: newDueInput.value || null,
+    targets: {
+      todoist: targetTodoistCheckbox.checked,
+      todoistProjectId: targetTodoistCheckbox.checked ? todoistProjectSelect.value || null : null,
+      icloudListId: targetIcloudCheckbox.checked ? icloudListSelect.value || null : null,
+    },
+  };
+
+  newReminderSubmitBtn.disabled = true;
+  newReminderSubmitBtn.textContent = "Agregando...";
+
+  try {
+    const response = await fetch("/api/reminders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      throw new Error(data.error || `El servidor respondió con estado ${response.status}`);
+    }
+
+    closeNewReminderForm();
+
+    if (data.warnings && data.warnings.length) {
+      showStatus(data.warnings.join(" · "), "error");
+    }
+
+    await loadReminders();
+  } catch (err) {
+    console.error(err);
+    showNewReminderError(err.message);
+  } finally {
+    newReminderSubmitBtn.disabled = false;
+    newReminderSubmitBtn.textContent = "Agregar";
+  }
+}
+
+function showNewReminderError(message) {
+  newReminderError.textContent = message;
+  newReminderError.hidden = false;
+}
+
+function hideNewReminderError() {
+  newReminderError.hidden = true;
+}
 
 async function loadReminders() {
   refreshBtn.disabled = true;

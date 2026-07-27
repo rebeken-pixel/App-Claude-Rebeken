@@ -24,7 +24,49 @@
         Ocultar completados
       </label>
       <button type="button" id="refresh-btn" class="btn btn--secondary">🔄 Actualizar</button>
+      <button type="button" id="new-reminder-btn" class="btn btn--primary">➕ Nuevo recordatorio</button>
     </div>
+
+    <form id="new-reminder-form" class="new-reminder-form" hidden>
+      <div class="new-reminder-form__field">
+        <label for="new-title">Título</label>
+        <input type="text" id="new-title" name="title" required placeholder="Ej: Llamar al banco" />
+      </div>
+
+      <div class="new-reminder-form__field">
+        <label for="new-notes">Notas (opcional)</label>
+        <textarea id="new-notes" name="notes" rows="2"></textarea>
+      </div>
+
+      <div class="new-reminder-form__field">
+        <label for="new-due">Fecha (opcional)</label>
+        <input type="date" id="new-due" name="due" />
+      </div>
+
+      <div class="new-reminder-form__destinations">
+        <div class="new-reminder-form__destination">
+          <label>
+            <input type="checkbox" id="target-todoist" checked />
+            Todoist
+          </label>
+          <select id="todoist-project" disabled></select>
+        </div>
+        <div class="new-reminder-form__destination">
+          <label>
+            <input type="checkbox" id="target-icloud" checked />
+            Reminders (iCloud)
+          </label>
+          <select id="icloud-list" disabled></select>
+        </div>
+      </div>
+
+      <p id="new-reminder-error" class="status-message" hidden></p>
+
+      <div class="new-reminder-form__actions">
+        <button type="submit" class="btn btn--primary" id="new-reminder-submit">Agregar</button>
+        <button type="button" class="btn btn--secondary" id="new-reminder-cancel">Cancelar</button>
+      </div>
+    </form>
 
     <p id="status-message" class="status-message" hidden></p>
 
