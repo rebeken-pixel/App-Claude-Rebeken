@@ -301,7 +301,7 @@ async function toggleCompleted(item, checkbox) {
     const response = await fetch(`/api/reminders/${encodeURIComponent(item.id)}/complete`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ completed: newValue }),
+      body: JSON.stringify({ completed: newValue, syncToken: item.syncToken }),
     });
     const data = await response.json();
 

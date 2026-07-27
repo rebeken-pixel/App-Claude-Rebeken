@@ -95,10 +95,10 @@ Abrí [http://localhost:3000](http://localhost:3000) en el navegador.
 
 - En Todoist, completar una tarea **recurrente** programa su próxima
   ocurrencia (es el comportamiento normal de Todoist), no la borra.
-- Para los recordatorios de iCloud, la app necesita haber cargado la lista
-  al menos una vez (recargando la página) antes de poder marcarlos como
-  completados — si reiniciás el servidor y probás marcar uno sin recargar
-  antes, vas a ver un error pidiéndote que actualices la página.
+- El servidor no guarda nada en memoria entre pedidos: cada recordatorio de
+  iCloud viaja con un pequeño token que el navegador reenvía al completarlo,
+  así que reiniciar el servidor (o que un hosting como Render lo duerma y
+  despierte) no rompe la posibilidad de marcarlos como completados.
 
 ## Notas de seguridad
 
