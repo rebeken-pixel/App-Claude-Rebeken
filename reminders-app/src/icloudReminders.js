@@ -1,6 +1,11 @@
 const { DAVClient } = require("tsdav");
 const ICAL = require("ical.js");
 
+// Recuerda de qué cuenta/URL/etag viene cada recordatorio para poder
+// reescribirlo (marcar completado) sin tener que rehacer todo el descubrimiento
+// de CalDAV. Se repuebla en cada GET /api/reminders.
+const objectCache = new Map();
+
 function parseAccounts() {
   const raw = process.env.ICLOUD_ACCOUNTS;
 
@@ -71,9 +76,17 @@ async function fetchAccountReminders({ username, password }) {
         const status = vtodo.getFirstPropertyValue("status");
         const dueProp = vtodo.getFirstProperty("due");
         const due = dueProp ? dueProp.getFirstValue().toJSDate().toISOString() : null;
+        const id = `icloud-${username}-${vtodo.getFirstPropertyValue("uid")}`;
+
+        objectCache.set(id, {
+          username,
+          url: object.url,
+          etag: object.etag,
+          data: object.data,
+        });
 
         reminders.push({
-          id: `icloud-${username}-${vtodo.getFirstPropertyValue("uid")}`,
+          id,
           source: "icloud",
           title: vtodo.getFirstPropertyValue("summary") || "(Sin título)",
           notes: vtodo.getFirstPropertyValue("description") || "",
@@ -120,4 +133,48 @@ async function getIcloudReminders() {
   return { items, errors };
 }
 
-module.exports = { getIcloudReminders };
+async function setIcloudReminderCompleted(id, completed) {
+  const cached = objectCache.get(id);
+  if (!cached) {
+    throw new Error(
+      "No se encontró ese recordatorio en la última carga; actualizá la página e intentá de nuevo."
+    );
+  }
+
+  const account = parseAccounts().find((acc) => acc.username === cached.username);
+  if (!account) {
+    throw new Error(`La cuenta ${cached.username} ya no está configurada en .env.`);
+  }
+
+  const client = new DAVClient({
+    serverUrl: "https://caldav.icloud.com",
+    credentials: account,
+    authMethod: "Basic",
+    defaultAccountType: "caldav",
+  });
+  await client.login();
+
+  const jcalData = ICAL.parse(cached.data);
+  const component = new ICAL.Component(jcalData);
+  const vtodo = component.getFirstSubcomponent("vtodo");
+
+  if (completed) {
+    vtodo.updatePropertyWithValue("status", "COMPLETED");
+    vtodo.updatePropertyWithValue("percent-complete", 100);
+    vtodo.updatePropertyWithValue("completed", ICAL.Time.now());
+  } else {
+    vtodo.removeProperty("status");
+    vtodo.removeProperty("percent-complete");
+    vtodo.removeProperty("completed");
+  }
+
+  const updatedData = component.toString();
+
+  await client.updateCalendarObject({
+    calendarObject: { url: cached.url, etag: cached.etag, data: updatedData },
+  });
+
+  cached.data = updatedData;
+}
+
+module.exports = { getIcloudReminders, setIcloudReminderCompleted };

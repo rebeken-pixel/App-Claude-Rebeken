@@ -164,6 +164,19 @@ body {
   margin-top: 6px;
 }
 
+.reminder-card__checkbox {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 3px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.reminder-card__checkbox:disabled {
+  cursor: wait;
+}
+
 .reminder-card__source--todoist {
   background: var(--color-todoist);
 }
