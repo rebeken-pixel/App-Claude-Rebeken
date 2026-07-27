@@ -215,7 +215,35 @@ body {
 .reminders-list {
   display: flex;
   flex-direction: column;
+  gap: 28px;
+}
+
+.reminders-group {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
+}
+
+.reminders-group__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reminders-group__heading {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: bold;
+  color: var(--color-text-muted);
+  padding-left: 2px;
+}
+
+.reminders-group__heading--vencidos {
+  color: var(--color-error);
+}
+
+.reminders-group__heading--hoy {
+  color: var(--color-primary-dark);
 }
 
 .reminder-card {

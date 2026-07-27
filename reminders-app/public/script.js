@@ -212,6 +212,34 @@ async function loadReminders() {
   }
 }
 
+const DUE_BUCKET_ORDER = ["vencidos", "hoy", "manana", "esta-semana", "mas-adelante", "sin-fecha"];
+const DUE_BUCKET_LABELS = {
+  vencidos: "⚠️ Vencidos",
+  hoy: "📅 Hoy",
+  manana: "➡️ Mañana",
+  "esta-semana": "🗓️ Esta semana",
+  "mas-adelante": "📆 Más adelante",
+  "sin-fecha": "🗂️ Sin fecha",
+};
+
+function getDueBucket(item) {
+  if (!item.due) return "sin-fecha";
+
+  const due = new Date(item.due);
+  const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const diffDays = Math.round((dueDay - today) / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) return "vencidos";
+  if (diffDays === 0) return "hoy";
+  if (diffDays === 1) return "manana";
+  if (diffDays <= 7) return "esta-semana";
+  return "mas-adelante";
+}
+
 function render() {
   let items = allReminders;
 
@@ -223,22 +251,45 @@ function render() {
     items = items.filter((item) => !item.completed);
   }
 
-  items = [...items].sort((a, b) => {
-    if (!a.due && !b.due) return 0;
-    if (!a.due) return 1;
-    if (!b.due) return -1;
-    return new Date(a.due) - new Date(b.due);
-  });
+  const groups = new Map();
+  for (const item of items) {
+    const bucket = getDueBucket(item);
+    if (!groups.has(bucket)) groups.set(bucket, []);
+    groups.get(bucket).push(item);
+  }
+
+  for (const bucketItems of groups.values()) {
+    bucketItems.sort((a, b) => new Date(a.due || 0) - new Date(b.due || 0));
+  }
 
   listEl.innerHTML = "";
 
-  if (items.length === 0) {
+  const hasAny = DUE_BUCKET_ORDER.some((key) => (groups.get(key) || []).length > 0);
+  if (!hasAny) {
     listEl.innerHTML = '<p class="empty-state">No hay recordatorios para mostrar.</p>';
     return;
   }
 
-  for (const item of items) {
-    listEl.appendChild(buildCard(item));
+  for (const bucketKey of DUE_BUCKET_ORDER) {
+    const bucketItems = groups.get(bucketKey);
+    if (!bucketItems || bucketItems.length === 0) continue;
+
+    const section = document.createElement("section");
+    section.className = "reminders-group";
+
+    const heading = document.createElement("h2");
+    heading.className = `reminders-group__heading reminders-group__heading--${bucketKey}`;
+    heading.textContent = `${DUE_BUCKET_LABELS[bucketKey]} (${bucketItems.length})`;
+    section.appendChild(heading);
+
+    const cardsWrap = document.createElement("div");
+    cardsWrap.className = "reminders-group__cards";
+    for (const item of bucketItems) {
+      cardsWrap.appendChild(buildCard(item));
+    }
+    section.appendChild(cardsWrap);
+
+    listEl.appendChild(section);
   }
 }
 
