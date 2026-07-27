@@ -1,16 +1,22 @@
 const { DAVClient } = require("tsdav");
 const ICAL = require("ical.js");
 
-// Recuerda de qué cuenta/URL/etag viene cada recordatorio para poder
-// reescribirlo (marcar completado) sin tener que rehacer todo el descubrimiento
-// de CalDAV. Se repuebla en cada GET /api/reminders.
-const objectCache = new Map();
+// El servidor no guarda nada en memoria entre pedidos (para poder correr en
+// hostings que duermen/reinician el proceso, como el plan gratis de Render).
+// En cambio, cada recordatorio de iCloud viaja con un "syncToken" opaco
+// (cuenta + URLs de CalDAV codificadas en base64) que el navegador guarda y
+// reenvía cuando hace falta reescribir ese recordatorio.
+function encodeToken(payload) {
+  return Buffer.from(JSON.stringify(payload)).toString("base64url");
+}
 
-// Recuerda a qué cuenta/URL de CalDAV corresponde cada lista de Reminders
-// ofrecida en el formulario de "nuevo recordatorio". Se repuebla cada vez
-// que se piden las listas disponibles.
-const listCache = new Map();
-let listIdCounter = 0;
+function decodeToken(token) {
+  try {
+    return JSON.parse(Buffer.from(token, "base64url").toString("utf8"));
+  } catch (err) {
+    throw new Error("Token inválido o vencido; actualizá la página e intentá de nuevo.");
+  }
+}
 
 function buildClient(account) {
   return new DAVClient({
@@ -42,6 +48,14 @@ function parseAccounts() {
   }
 
   return [];
+}
+
+function findAccount(username) {
+  const account = parseAccounts().find((acc) => acc.username === username);
+  if (!account) {
+    throw new Error(`La cuenta ${username} ya no está configurada en .env.`);
+  }
+  return account;
 }
 
 async function fetchAccountReminders(account) {
@@ -87,17 +101,15 @@ async function fetchAccountReminders(account) {
         const status = vtodo.getFirstPropertyValue("status");
         const dueProp = vtodo.getFirstProperty("due");
         const due = dueProp ? dueProp.getFirstValue().toJSDate().toISOString() : null;
-        const id = `icloud-${username}-${vtodo.getFirstPropertyValue("uid")}`;
 
-        objectCache.set(id, {
+        const syncToken = encodeToken({
           username,
-          url: object.url,
-          etag: object.etag,
-          data: object.data,
+          calendarUrl: list.url,
+          objectUrl: object.url,
         });
 
         reminders.push({
-          id,
+          id: `icloud-${username}-${vtodo.getFirstPropertyValue("uid")}`,
           source: "icloud",
           title: vtodo.getFirstPropertyValue("summary") || "(Sin título)",
           notes: vtodo.getFirstPropertyValue("description") || "",
@@ -107,6 +119,7 @@ async function fetchAccountReminders(account) {
           listName: `${accountLabel} · ${list.displayName || "Recordatorios"}`,
           completed: status === "COMPLETED",
           priority: vtodo.getFirstPropertyValue("priority") || 0,
+          syncToken,
         });
       }
     }
@@ -144,23 +157,29 @@ async function getIcloudReminders() {
   return { items, errors };
 }
 
-async function setIcloudReminderCompleted(id, completed) {
-  const cached = objectCache.get(id);
-  if (!cached) {
-    throw new Error(
-      "No se encontró ese recordatorio en la última carga; actualizá la página e intentá de nuevo."
-    );
+async function setIcloudReminderCompleted(syncToken, completed) {
+  if (!syncToken) {
+    throw new Error("Falta el token del recordatorio; actualizá la página e intentá de nuevo.");
   }
 
-  const account = parseAccounts().find((acc) => acc.username === cached.username);
-  if (!account) {
-    throw new Error(`La cuenta ${cached.username} ya no está configurada en .env.`);
-  }
+  const { username, calendarUrl, objectUrl } = decodeToken(syncToken);
+  const account = findAccount(username);
 
   const client = buildClient(account);
   await client.login();
 
-  const jcalData = ICAL.parse(cached.data);
+  const [object] = await client.fetchCalendarObjects({
+    calendar: { url: calendarUrl },
+    objectUrls: [objectUrl],
+  });
+
+  if (!object || !object.data) {
+    throw new Error(
+      "No se encontró ese recordatorio en iCloud; puede que ya no exista. Actualizá la página."
+    );
+  }
+
+  const jcalData = ICAL.parse(object.data);
   const component = new ICAL.Component(jcalData);
   const vtodo = component.getFirstSubcomponent("vtodo");
 
@@ -177,10 +196,8 @@ async function setIcloudReminderCompleted(id, completed) {
   const updatedData = component.toString();
 
   await client.updateCalendarObject({
-    calendarObject: { url: cached.url, etag: cached.etag, data: updatedData },
+    calendarObject: { url: object.url, etag: object.etag, data: updatedData },
   });
-
-  cached.data = updatedData;
 }
 
 async function getIcloudReminderLists() {
@@ -195,40 +212,27 @@ async function getIcloudReminderLists() {
       return calendars
         .filter((calendar) => (calendar.components || []).includes("VTODO"))
         .map((calendar) => ({
-          username: account.username,
-          url: calendar.url,
-          displayName: calendar.displayName || "Recordatorios",
+          id: encodeToken({ username: account.username, url: calendar.url }),
+          label: `${account.username.split("@")[0]} · ${calendar.displayName || "Recordatorios"}`,
         }));
     })
   );
 
-  listCache.clear();
   const lists = [];
-
   results.forEach((result) => {
-    if (result.status !== "fulfilled") return;
-    for (const list of result.value) {
-      const id = `list-${listIdCounter++}`;
-      listCache.set(id, list);
-      lists.push({ id, label: `${list.username.split("@")[0]} · ${list.displayName}` });
-    }
+    if (result.status === "fulfilled") lists.push(...result.value);
   });
 
   return lists;
 }
 
 async function createIcloudReminder({ listId, title, notes, due }) {
-  const list = listCache.get(listId);
-  if (!list) {
-    throw new Error(
-      "Esa lista de Reminders ya no está disponible; volvé a abrir el formulario e intentá de nuevo."
-    );
+  if (!listId) {
+    throw new Error("Falta elegir una lista de Reminders.");
   }
 
-  const account = parseAccounts().find((acc) => acc.username === list.username);
-  if (!account) {
-    throw new Error(`La cuenta ${list.username} ya no está configurada en .env.`);
-  }
+  const { username, url } = decodeToken(listId);
+  const account = findAccount(username);
 
   const client = buildClient(account);
   await client.login();
@@ -254,7 +258,7 @@ async function createIcloudReminder({ listId, title, notes, due }) {
   vcalendar.addSubcomponent(vtodo);
 
   await client.createCalendarObject({
-    calendar: { url: list.url },
+    calendar: { url },
     iCalString: vcalendar.toString(),
     filename: `${uid}.ics`,
   });

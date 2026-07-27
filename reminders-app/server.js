@@ -48,7 +48,7 @@ app.post("/api/reminders/:id/complete", async (req, res) => {
     if (id.startsWith("todoist-")) {
       await setTodoistTaskCompleted(id.slice("todoist-".length), completed);
     } else if (id.startsWith("icloud-")) {
-      await setIcloudReminderCompleted(id, completed);
+      await setIcloudReminderCompleted(req.body?.syncToken, completed);
     } else {
       return res.status(404).json({ ok: false, error: "Recordatorio desconocido." });
     }
