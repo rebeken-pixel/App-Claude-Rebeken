@@ -142,6 +142,10 @@ body {
   gap: 14px;
 }
 
+.new-reminder-form[hidden] {
+  display: none;
+}
+
 .new-reminder-form__field {
   display: flex;
   flex-direction: column;
@@ -284,6 +288,23 @@ body {
 
 .reminder-card__checkbox:disabled {
   cursor: wait;
+}
+
+.reminder-card__edit-btn {
+  flex-shrink: 0;
+  align-self: flex-start;
+  background: transparent;
+  border: none;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 4px;
+  cursor: pointer;
+  opacity: 0.45;
+  transition: opacity 0.15s ease;
+}
+
+.reminder-card__edit-btn:hover {
+  opacity: 1;
 }
 
 .reminder-card__source--todoist {

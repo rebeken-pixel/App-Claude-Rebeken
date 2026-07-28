@@ -17,9 +17,18 @@ const targetIcloudCheckbox = document.getElementById("target-icloud");
 const todoistProjectSelect = document.getElementById("todoist-project");
 const icloudListSelect = document.getElementById("icloud-list");
 
+const editReminderForm = document.getElementById("edit-reminder-form");
+const editReminderCancelBtn = document.getElementById("edit-reminder-cancel");
+const editReminderSubmitBtn = document.getElementById("edit-reminder-submit");
+const editReminderError = document.getElementById("edit-reminder-error");
+const editTitleInput = document.getElementById("edit-title");
+const editNotesInput = document.getElementById("edit-notes");
+const editDueInput = document.getElementById("edit-due");
+
 let allReminders = [];
 let activeFilter = "all";
 let newReminderOptionsLoaded = false;
+let editingItem = null;
 
 filterChips.forEach((chip) => {
   chip.addEventListener("click", () => {
@@ -164,6 +173,85 @@ function showNewReminderError(message) {
 
 function hideNewReminderError() {
   newReminderError.hidden = true;
+}
+
+editReminderCancelBtn.addEventListener("click", closeEditForm);
+editReminderForm.addEventListener("submit", submitEditReminder);
+
+function openEditForm(item) {
+  editingItem = item;
+  editTitleInput.value = item.title;
+  editNotesInput.value = item.notes || "";
+  editDueInput.value = item.due ? item.due.slice(0, 10) : "";
+  hideEditError();
+
+  newReminderForm.hidden = true;
+  newReminderBtn.hidden = false;
+
+  editReminderForm.hidden = false;
+  editReminderForm.scrollIntoView({ behavior: "smooth", block: "center" });
+  editTitleInput.focus();
+}
+
+function closeEditForm() {
+  editingItem = null;
+  editReminderForm.hidden = true;
+  editReminderForm.reset();
+  hideEditError();
+}
+
+async function submitEditReminder(event) {
+  event.preventDefault();
+  hideEditError();
+
+  if (!editingItem) return;
+
+  const title = editTitleInput.value.trim();
+  if (!title) {
+    showEditError("El título es obligatorio.");
+    return;
+  }
+
+  const body = {
+    title,
+    notes: editNotesInput.value.trim(),
+    due: editDueInput.value || null,
+    syncToken: editingItem.syncToken,
+  };
+
+  editReminderSubmitBtn.disabled = true;
+  editReminderSubmitBtn.textContent = "Guardando...";
+
+  try {
+    const response = await fetch(`/api/reminders/${encodeURIComponent(editingItem.id)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      throw new Error(data.error || `El servidor respondió con estado ${response.status}`);
+    }
+
+    closeEditForm();
+    await loadReminders();
+  } catch (err) {
+    console.error(err);
+    showEditError(err.message);
+  } finally {
+    editReminderSubmitBtn.disabled = false;
+    editReminderSubmitBtn.textContent = "Guardar cambios";
+  }
+}
+
+function showEditError(message) {
+  editReminderError.textContent = message;
+  editReminderError.hidden = false;
+}
+
+function hideEditError() {
+  editReminderError.hidden = true;
 }
 
 async function loadReminders() {
@@ -341,6 +429,15 @@ function buildCard(item) {
 
   body.appendChild(meta);
   card.appendChild(body);
+
+  const editBtn = document.createElement("button");
+  editBtn.type = "button";
+  editBtn.className = "reminder-card__edit-btn";
+  editBtn.title = "Editar";
+  editBtn.textContent = "✏️";
+  editBtn.addEventListener("click", () => openEditForm(item));
+  card.appendChild(editBtn);
+
   return card;
 }
 

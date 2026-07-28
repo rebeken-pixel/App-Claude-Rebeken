@@ -100,9 +100,38 @@ async function createTodoistTask({ title, notes, due, projectId }) {
   }
 }
 
+async function updateTodoistTask(taskId, { title, notes, due }) {
+  const token = getToken();
+
+  const body = {};
+  if (title !== undefined) body.content = title;
+  if (notes !== undefined) body.description = notes;
+  if (due !== undefined) {
+    if (due) {
+      body.due_date = due;
+    } else {
+      body.due_string = null;
+    }
+  }
+
+  const response = await fetch(`${API_BASE}/tasks/${taskId}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Todoist respondió con estado ${response.status} al actualizar la tarea.`);
+  }
+}
+
 module.exports = {
   getTodoistTasks,
   setTodoistTaskCompleted,
   getTodoistProjects,
   createTodoistTask,
+  updateTodoistTask,
 };

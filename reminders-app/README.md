@@ -92,6 +92,9 @@ Abrí [http://localhost:3000](http://localhost:3000) en el navegador.
   elegido en ese momento; no queda "enlazado" después — completarlo o editarlo
   en un lado no afecta al otro (salvo el marcado de completado, que si se hace
   desde esta app sí se sincroniza, como se explica abajo).
+- Botón ✏️ en cada tarjeta para **editar** título, notas y fecha de un
+  recordatorio existente — el cambio se guarda directamente en Todoist o
+  iCloud, según corresponda.
 
 ## Notas sobre completar recordatorios
 
