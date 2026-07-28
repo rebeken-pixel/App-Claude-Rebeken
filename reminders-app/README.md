@@ -79,8 +79,10 @@ Abrí [http://localhost:3000](http://localhost:3000) en el navegador.
   Esta semana, Más adelante y Sin fecha** (en ese orden), y ordenada por
   fecha dentro de cada grupo.
 - Buscador de texto (por título o notas, sin distinguir mayúsculas ni tildes).
-- Filtros por fuente (Todoist / Reminders / Todos).
-- Opción para ocultar recordatorios completados.
+- Filtros por fuente (Todoist / Reminders / Todos) y opción para ocultar
+  recordatorios completados — ambos se recuerdan entre sesiones (guardados
+  en el navegador con `localStorage`), así no hay que reconfigurarlos cada
+  vez que abrís la app.
 - Botón de actualizar para volver a consultar todas las fuentes.
 - Casillero para marcar un recordatorio como completado (o reabrirlo) desde
   la lista unificada — el cambio se sincroniza con Todoist o iCloud según
