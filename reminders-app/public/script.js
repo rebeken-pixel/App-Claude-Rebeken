@@ -3,6 +3,7 @@ const statusMessage = document.getElementById("status-message");
 const refreshBtn = document.getElementById("refresh-btn");
 const hideCompletedCheckbox = document.getElementById("hide-completed");
 const filterChips = document.querySelectorAll(".chip");
+const searchInput = document.getElementById("search-input");
 
 const newReminderBtn = document.getElementById("new-reminder-btn");
 const newReminderForm = document.getElementById("new-reminder-form");
@@ -40,6 +41,7 @@ filterChips.forEach((chip) => {
 });
 
 hideCompletedCheckbox.addEventListener("change", render);
+searchInput.addEventListener("input", render);
 refreshBtn.addEventListener("click", loadReminders);
 
 newReminderBtn.addEventListener("click", openNewReminderForm);
@@ -328,6 +330,13 @@ function getDueBucket(item) {
   return "mas-adelante";
 }
 
+function normalizeText(text) {
+  return (text || "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
+}
+
 function render() {
   let items = allReminders;
 
@@ -337,6 +346,14 @@ function render() {
 
   if (hideCompletedCheckbox.checked) {
     items = items.filter((item) => !item.completed);
+  }
+
+  const query = normalizeText(searchInput.value.trim());
+  if (query) {
+    items = items.filter(
+      (item) =>
+        normalizeText(item.title).includes(query) || normalizeText(item.notes).includes(query)
+    );
   }
 
   const groups = new Map();
@@ -354,7 +371,10 @@ function render() {
 
   const hasAny = DUE_BUCKET_ORDER.some((key) => (groups.get(key) || []).length > 0);
   if (!hasAny) {
-    listEl.innerHTML = '<p class="empty-state">No hay recordatorios para mostrar.</p>';
+    const message = query
+      ? "No hay recordatorios que coincidan con la búsqueda."
+      : "No hay recordatorios para mostrar.";
+    listEl.innerHTML = `<p class="empty-state">${message}</p>`;
     return;
   }
 
