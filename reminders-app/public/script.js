@@ -26,21 +26,66 @@ const editTitleInput = document.getElementById("edit-title");
 const editNotesInput = document.getElementById("edit-notes");
 const editDueInput = document.getElementById("edit-due");
 
+const FILTERS_STORAGE_KEY = "remindersApp.filters";
+
 let allReminders = [];
 let activeFilter = "all";
 let newReminderOptionsLoaded = false;
 let editingItem = null;
+
+function loadSavedFilters() {
+  try {
+    const raw = localStorage.getItem(FILTERS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function saveFilters() {
+  try {
+    localStorage.setItem(
+      FILTERS_STORAGE_KEY,
+      JSON.stringify({ activeFilter, hideCompleted: hideCompletedCheckbox.checked })
+    );
+  } catch (err) {
+    // localStorage no disponible (modo privado, etc.): seguimos sin persistir.
+  }
+}
+
+function applySavedFilters() {
+  const saved = loadSavedFilters();
+  if (!saved) return;
+
+  const validFilters = Array.from(filterChips).map((chip) => chip.dataset.filter);
+  if (validFilters.includes(saved.activeFilter)) {
+    activeFilter = saved.activeFilter;
+    filterChips.forEach((chip) => {
+      chip.classList.toggle("chip--active", chip.dataset.filter === activeFilter);
+    });
+  }
+
+  if (typeof saved.hideCompleted === "boolean") {
+    hideCompletedCheckbox.checked = saved.hideCompleted;
+  }
+}
+
+applySavedFilters();
 
 filterChips.forEach((chip) => {
   chip.addEventListener("click", () => {
     filterChips.forEach((c) => c.classList.remove("chip--active"));
     chip.classList.add("chip--active");
     activeFilter = chip.dataset.filter;
+    saveFilters();
     render();
   });
 });
 
-hideCompletedCheckbox.addEventListener("change", render);
+hideCompletedCheckbox.addEventListener("change", () => {
+  saveFilters();
+  render();
+});
 searchInput.addEventListener("input", render);
 refreshBtn.addEventListener("click", loadReminders);
 
