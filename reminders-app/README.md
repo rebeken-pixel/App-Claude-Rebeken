@@ -78,6 +78,7 @@ Abrí [http://localhost:3000](http://localhost:3000) en el navegador.
   varias cuentas de iCloud), agrupada por fecha: **Vencidos, Hoy, Mañana,
   Esta semana, Más adelante y Sin fecha** (en ese orden), y ordenada por
   fecha dentro de cada grupo.
+- Buscador de texto (por título o notas, sin distinguir mayúsculas ni tildes).
 - Filtros por fuente (Todoist / Reminders / Todos).
 - Opción para ocultar recordatorios completados.
 - Botón de actualizar para volver a consultar todas las fuentes.
