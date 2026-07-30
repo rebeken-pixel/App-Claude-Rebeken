@@ -12,6 +12,7 @@ const bookAuthors = document.getElementById("book-authors");
 const bookMeta = document.getElementById("book-meta");
 const bookSynopsis = document.getElementById("book-synopsis");
 const copyFeedback = document.getElementById("copy-feedback");
+const emptyState = document.getElementById("empty-state");
 
 const GOOGLE_BOOKS_API_KEY = "AIzaSyA4Fq0frKB4VcsAAcSoktDM_DUWMC8UO90";
 
@@ -38,6 +39,7 @@ form.addEventListener("submit", async (event) => {
 
   setLoading(true);
   result.hidden = true;
+  emptyState.hidden = true;
 
   try {
     const book = await searchBook(title, author);
