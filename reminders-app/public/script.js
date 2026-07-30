@@ -15,8 +15,13 @@ const newNotesInput = document.getElementById("new-notes");
 const newDueInput = document.getElementById("new-due");
 const targetTodoistCheckbox = document.getElementById("target-todoist");
 const targetIcloudCheckbox = document.getElementById("target-icloud");
+const targetMstodoCheckbox = document.getElementById("target-mstodo");
 const todoistProjectSelect = document.getElementById("todoist-project");
 const icloudListSelect = document.getElementById("icloud-list");
+const mstodoListSelect = document.getElementById("mstodo-list");
+
+const msConnectBtn = document.getElementById("ms-connect-btn");
+const msDisconnectBtn = document.getElementById("ms-disconnect-btn");
 
 const editReminderForm = document.getElementById("edit-reminder-form");
 const editReminderCancelBtn = document.getElementById("edit-reminder-cancel");
@@ -72,6 +77,53 @@ function applySavedFilters() {
 
 applySavedFilters();
 
+const MS_TOKEN_STORAGE_KEY = "msRefreshToken";
+
+function getMsRefreshToken() {
+  try {
+    return localStorage.getItem(MS_TOKEN_STORAGE_KEY) || "";
+  } catch (err) {
+    return "";
+  }
+}
+
+function setMsRefreshToken(token) {
+  if (!token) return;
+  try {
+    localStorage.setItem(MS_TOKEN_STORAGE_KEY, token);
+  } catch (err) {
+    // localStorage no disponible: seguimos sin persistir.
+  }
+  updateMsConnectionUI();
+}
+
+function clearMsRefreshToken() {
+  try {
+    localStorage.removeItem(MS_TOKEN_STORAGE_KEY);
+  } catch (err) {
+    // ignorar
+  }
+  updateMsConnectionUI();
+}
+
+function msHeaders() {
+  const token = getMsRefreshToken();
+  return token ? { "X-MS-Refresh-Token": token } : {};
+}
+
+function updateMsConnectionUI() {
+  const connected = Boolean(getMsRefreshToken());
+  msConnectBtn.hidden = connected;
+  msDisconnectBtn.hidden = !connected;
+}
+
+msDisconnectBtn.addEventListener("click", () => {
+  clearMsRefreshToken();
+  loadReminders();
+});
+
+updateMsConnectionUI();
+
 filterChips.forEach((chip) => {
   chip.addEventListener("click", () => {
     filterChips.forEach((c) => c.classList.remove("chip--active"));
@@ -97,6 +149,9 @@ targetTodoistCheckbox.addEventListener("change", () => {
 targetIcloudCheckbox.addEventListener("change", () => {
   icloudListSelect.disabled = !targetIcloudCheckbox.checked;
 });
+targetMstodoCheckbox.addEventListener("change", () => {
+  mstodoListSelect.disabled = !targetMstodoCheckbox.checked;
+});
 newReminderForm.addEventListener("submit", submitNewReminder);
 
 async function openNewReminderForm() {
@@ -107,8 +162,10 @@ async function openNewReminderForm() {
   if (newReminderOptionsLoaded) return;
 
   try {
-    const response = await fetch("/api/new-reminder-options");
+    const response = await fetch("/api/new-reminder-options", { headers: msHeaders() });
     const data = await response.json();
+
+    if (data.msRefreshToken) setMsRefreshToken(data.msRefreshToken);
 
     todoistProjectSelect.innerHTML = "";
     for (const project of data.todoistProjects) {
@@ -140,6 +197,23 @@ async function openNewReminderForm() {
       icloudListSelect.disabled = !targetIcloudCheckbox.checked;
     }
 
+    mstodoListSelect.innerHTML = "";
+    for (const list of data.mstodoLists) {
+      const option = document.createElement("option");
+      option.value = list.id;
+      option.textContent = list.label;
+      mstodoListSelect.appendChild(option);
+    }
+
+    if (data.mstodoLists.length === 0) {
+      targetMstodoCheckbox.checked = false;
+      targetMstodoCheckbox.disabled = true;
+      mstodoListSelect.disabled = true;
+    } else {
+      targetMstodoCheckbox.disabled = false;
+      mstodoListSelect.disabled = !targetMstodoCheckbox.checked;
+    }
+
     newReminderOptionsLoaded = true;
   } catch (err) {
     console.error(err);
@@ -153,6 +227,7 @@ function closeNewReminderForm() {
   newReminderForm.reset();
   targetTodoistCheckbox.checked = true;
   targetIcloudCheckbox.checked = !targetIcloudCheckbox.disabled;
+  targetMstodoCheckbox.checked = false;
   hideNewReminderError();
 }
 
@@ -166,8 +241,8 @@ async function submitNewReminder(event) {
     return;
   }
 
-  if (!targetTodoistCheckbox.checked && !targetIcloudCheckbox.checked) {
-    showNewReminderError("Elegí al menos un destino (Todoist y/o Reminders).");
+  if (!targetTodoistCheckbox.checked && !targetIcloudCheckbox.checked && !targetMstodoCheckbox.checked) {
+    showNewReminderError("Elegí al menos un destino (Todoist, Reminders y/o Microsoft To Do).");
     return;
   }
 
@@ -179,6 +254,7 @@ async function submitNewReminder(event) {
       todoist: targetTodoistCheckbox.checked,
       todoistProjectId: targetTodoistCheckbox.checked ? todoistProjectSelect.value || null : null,
       icloudListId: targetIcloudCheckbox.checked ? icloudListSelect.value || null : null,
+      mstodoListId: targetMstodoCheckbox.checked ? mstodoListSelect.value || null : null,
     },
   };
 
@@ -188,7 +264,7 @@ async function submitNewReminder(event) {
   try {
     const response = await fetch("/api/reminders", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...msHeaders() },
       body: JSON.stringify(body),
     });
     const data = await response.json();
@@ -196,6 +272,8 @@ async function submitNewReminder(event) {
     if (!response.ok || !data.ok) {
       throw new Error(data.error || `El servidor respondió con estado ${response.status}`);
     }
+
+    if (data.msRefreshToken) setMsRefreshToken(data.msRefreshToken);
 
     closeNewReminderForm();
 
@@ -272,7 +350,7 @@ async function submitEditReminder(event) {
   try {
     const response = await fetch(`/api/reminders/${encodeURIComponent(editingItem.id)}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...msHeaders() },
       body: JSON.stringify(body),
     });
     const data = await response.json();
@@ -280,6 +358,8 @@ async function submitEditReminder(event) {
     if (!response.ok || !data.ok) {
       throw new Error(data.error || `El servidor respondió con estado ${response.status}`);
     }
+
+    if (data.msRefreshToken) setMsRefreshToken(data.msRefreshToken);
 
     closeEditForm();
     await loadReminders();
@@ -307,7 +387,7 @@ async function loadReminders() {
   hideStatus();
 
   try {
-    const response = await fetch("/api/reminders");
+    const response = await fetch("/api/reminders", { headers: msHeaders() });
     if (!response.ok) {
       throw new Error(`El servidor respondió con estado ${response.status}`);
     }
@@ -329,6 +409,15 @@ async function loadReminders() {
       }
     } else {
       errors.push(`Reminders (iCloud): ${data.icloud.error}`);
+    }
+
+    if (data.mstodo) {
+      if (data.mstodo.ok) {
+        items.push(...data.mstodo.items);
+        if (data.mstodo.refreshToken) setMsRefreshToken(data.mstodo.refreshToken);
+      } else {
+        errors.push(`Microsoft To Do: ${data.mstodo.error}`);
+      }
     }
 
     allReminders = items;
@@ -446,6 +535,8 @@ function render() {
   }
 }
 
+const SOURCE_LABELS = { todoist: "Todoist", icloud: "Reminders", mstodo: "Microsoft To Do" };
+
 function buildCard(item) {
   const card = document.createElement("article");
   card.className = `reminder-card${item.completed ? " reminder-card--completed" : ""}`;
@@ -475,7 +566,7 @@ function buildCard(item) {
 
   const badge = document.createElement("span");
   badge.className = `reminder-card__badge reminder-card__badge--${item.source}`;
-  badge.textContent = item.source === "todoist" ? "Todoist" : "Reminders";
+  badge.textContent = SOURCE_LABELS[item.source] || item.source;
   meta.appendChild(badge);
 
   const list = document.createElement("span");
@@ -513,7 +604,7 @@ async function toggleCompleted(item, checkbox) {
   try {
     const response = await fetch(`/api/reminders/${encodeURIComponent(item.id)}/complete`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...msHeaders() },
       body: JSON.stringify({ completed: newValue, syncToken: item.syncToken }),
     });
     const data = await response.json();
@@ -521,6 +612,8 @@ async function toggleCompleted(item, checkbox) {
     if (!response.ok || !data.ok) {
       throw new Error(data.error || `El servidor respondió con estado ${response.status}`);
     }
+
+    if (data.msRefreshToken) setMsRefreshToken(data.msRefreshToken);
 
     item.completed = newValue;
     render();

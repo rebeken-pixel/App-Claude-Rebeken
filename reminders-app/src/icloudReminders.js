@@ -1,23 +1,12 @@
 const { DAVClient } = require("tsdav");
 const ICAL = require("ical.js");
+const { encodeToken, decodeToken } = require("./syncToken");
 
 // El servidor no guarda nada en memoria entre pedidos (para poder correr en
 // hostings que duermen/reinician el proceso, como el plan gratis de Render).
 // En cambio, cada recordatorio de iCloud viaja con un "syncToken" opaco
 // (cuenta + URLs de CalDAV codificadas en base64) que el navegador guarda y
 // reenvía cuando hace falta reescribir ese recordatorio.
-function encodeToken(payload) {
-  return Buffer.from(JSON.stringify(payload)).toString("base64url");
-}
-
-function decodeToken(token) {
-  try {
-    return JSON.parse(Buffer.from(token, "base64url").toString("utf8"));
-  } catch (err) {
-    throw new Error("Token inválido o vencido; actualizá la página e intentá de nuevo.");
-  }
-}
-
 function buildClient(account) {
   return new DAVClient({
     serverUrl: "https://caldav.icloud.com",
