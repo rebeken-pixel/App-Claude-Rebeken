@@ -18,6 +18,16 @@ const {
   createIcloudReminder,
   updateIcloudReminder,
 } = require("./src/icloudReminders");
+const {
+  isMicrosoftConfigured,
+  getAuthorizeUrl,
+  exchangeCodeForTokens,
+  getMicrosoftTasks,
+  setMicrosoftTaskCompleted,
+  updateMicrosoftTask,
+  getMicrosoftTaskLists,
+  createMicrosoftTask,
+} = require("./src/microsoftTodo");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -56,17 +66,57 @@ function requireLogin(req, res, next) {
   res.status(401).send("Autenticación requerida.");
 }
 
+function getMsRefreshToken(req) {
+  return req.header("X-MS-Refresh-Token") || req.body?.msRefreshToken || null;
+}
+
 app.use(requireLogin);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
+app.get("/auth/microsoft/login", (req, res) => {
+  if (!isMicrosoftConfigured()) {
+    return res
+      .status(400)
+      .send("Falta configurar MS_CLIENT_ID, MS_CLIENT_SECRET y MS_REDIRECT_URI en el .env.");
+  }
+  res.redirect(getAuthorizeUrl());
+});
+
+app.get("/auth/microsoft/callback", async (req, res) => {
+  const { code, error, error_description: errorDescription } = req.query;
+
+  if (error) {
+    return res.status(400).send(`Error de Microsoft: ${errorDescription || error}`);
+  }
+
+  try {
+    const tokens = await exchangeCodeForTokens(code);
+    res.send(`<!doctype html>
+<html lang="es">
+<body>
+  <script>
+    localStorage.setItem("msRefreshToken", ${JSON.stringify(tokens.refresh_token)});
+    window.location.href = "/";
+  </script>
+  Conectado con Microsoft. Redirigiendo...
+</body>
+</html>`);
+  } catch (err) {
+    res.status(500).send(`Error al conectar con Microsoft: ${err.message}`);
+  }
+});
+
 app.get("/api/reminders", async (req, res) => {
-  const [todoist, icloud] = await Promise.allSettled([
+  const msRefreshToken = getMsRefreshToken(req);
+
+  const [todoist, icloud, mstodo] = await Promise.allSettled([
     getTodoistTasks(),
     getIcloudReminders(),
+    msRefreshToken ? getMicrosoftTasks(msRefreshToken) : Promise.resolve(null),
   ]);
 
-  res.json({
+  const response = {
     todoist:
       todoist.status === "fulfilled"
         ? { ok: true, items: todoist.value }
@@ -75,7 +125,16 @@ app.get("/api/reminders", async (req, res) => {
       icloud.status === "fulfilled"
         ? { ok: true, items: icloud.value.items, warnings: icloud.value.errors }
         : { ok: false, error: icloud.reason.message },
-  });
+  };
+
+  if (msRefreshToken) {
+    response.mstodo =
+      mstodo.status === "fulfilled"
+        ? { ok: true, items: mstodo.value.items, refreshToken: mstodo.value.refreshToken }
+        : { ok: false, error: mstodo.reason.message };
+  }
+
+  res.json(response);
 });
 
 app.post("/api/reminders/:id/complete", async (req, res) => {
@@ -85,12 +144,21 @@ app.post("/api/reminders/:id/complete", async (req, res) => {
   try {
     if (id.startsWith("todoist-")) {
       await setTodoistTaskCompleted(id.slice("todoist-".length), completed);
-    } else if (id.startsWith("icloud-")) {
-      await setIcloudReminderCompleted(req.body?.syncToken, completed);
-    } else {
-      return res.status(404).json({ ok: false, error: "Recordatorio desconocido." });
+      return res.json({ ok: true });
     }
-    res.json({ ok: true });
+    if (id.startsWith("icloud-")) {
+      await setIcloudReminderCompleted(req.body?.syncToken, completed);
+      return res.json({ ok: true });
+    }
+    if (id.startsWith("mstodo-")) {
+      const result = await setMicrosoftTaskCompleted(
+        getMsRefreshToken(req),
+        req.body?.syncToken,
+        completed
+      );
+      return res.json({ ok: true, msRefreshToken: result.refreshToken });
+    }
+    return res.status(404).json({ ok: false, error: "Recordatorio desconocido." });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
@@ -107,26 +175,40 @@ app.put("/api/reminders/:id", async (req, res) => {
   try {
     if (id.startsWith("todoist-")) {
       await updateTodoistTask(id.slice("todoist-".length), { title, notes, due });
-    } else if (id.startsWith("icloud-")) {
-      await updateIcloudReminder(syncToken, { title, notes, due });
-    } else {
-      return res.status(404).json({ ok: false, error: "Recordatorio desconocido." });
+      return res.json({ ok: true });
     }
-    res.json({ ok: true });
+    if (id.startsWith("icloud-")) {
+      await updateIcloudReminder(syncToken, { title, notes, due });
+      return res.json({ ok: true });
+    }
+    if (id.startsWith("mstodo-")) {
+      const result = await updateMicrosoftTask(getMsRefreshToken(req), syncToken, {
+        title,
+        notes,
+        due,
+      });
+      return res.json({ ok: true, msRefreshToken: result.refreshToken });
+    }
+    return res.status(404).json({ ok: false, error: "Recordatorio desconocido." });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
 });
 
 app.get("/api/new-reminder-options", async (req, res) => {
-  const [todoistProjects, icloudLists] = await Promise.allSettled([
+  const msRefreshToken = getMsRefreshToken(req);
+
+  const [todoistProjects, icloudLists, mstodoLists] = await Promise.allSettled([
     getTodoistProjects(),
     getIcloudReminderLists(),
+    getMicrosoftTaskLists(msRefreshToken),
   ]);
 
   res.json({
     todoistProjects: todoistProjects.status === "fulfilled" ? todoistProjects.value : [],
     icloudLists: icloudLists.status === "fulfilled" ? icloudLists.value : [],
+    mstodoLists: mstodoLists.status === "fulfilled" ? mstodoLists.value.lists : [],
+    msRefreshToken: mstodoLists.status === "fulfilled" ? mstodoLists.value.refreshToken : null,
   });
 });
 
@@ -136,14 +218,16 @@ app.post("/api/reminders", async (req, res) => {
   if (!title || !title.trim()) {
     return res.status(400).json({ ok: false, error: "El título es obligatorio." });
   }
-  if (!targets || (!targets.todoist && !targets.icloudListId)) {
+  if (!targets || (!targets.todoist && !targets.icloudListId && !targets.mstodoListId)) {
     return res
       .status(400)
-      .json({ ok: false, error: "Elegí al menos un destino (Todoist y/o Reminders)." });
+      .json({ ok: false, error: "Elegí al menos un destino (Todoist, Reminders y/o Microsoft To Do)." });
   }
 
-  const requestedCount = (targets.todoist ? 1 : 0) + (targets.icloudListId ? 1 : 0);
+  const requestedCount =
+    (targets.todoist ? 1 : 0) + (targets.icloudListId ? 1 : 0) + (targets.mstodoListId ? 1 : 0);
   const errors = [];
+  let msRefreshToken = null;
 
   if (targets.todoist) {
     try {
@@ -161,11 +245,25 @@ app.post("/api/reminders", async (req, res) => {
     }
   }
 
+  if (targets.mstodoListId) {
+    try {
+      const result = await createMicrosoftTask(getMsRefreshToken(req), {
+        listId: targets.mstodoListId,
+        title,
+        notes,
+        due,
+      });
+      msRefreshToken = result.refreshToken;
+    } catch (err) {
+      errors.push(`Microsoft To Do: ${err.message}`);
+    }
+  }
+
   if (errors.length === requestedCount) {
     return res.status(500).json({ ok: false, error: errors.join(" · ") });
   }
 
-  res.json({ ok: true, warnings: errors });
+  res.json({ ok: true, warnings: errors, msRefreshToken });
 });
 
 app.listen(PORT, () => {

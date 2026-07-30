@@ -10,7 +10,7 @@
   <div class="app">
     <header class="app__header">
       <h1>🔔 Recordatorios Unificados</h1>
-      <p class="app__subtitle">Todoist y Apple Reminders en un solo lugar</p>
+      <p class="app__subtitle">Todoist, Apple Reminders y Microsoft To Do en un solo lugar</p>
     </header>
 
     <div class="toolbar">
@@ -24,11 +24,16 @@
         <button type="button" class="chip chip--active" data-filter="all">Todos</button>
         <button type="button" class="chip" data-filter="todoist">Todoist</button>
         <button type="button" class="chip" data-filter="icloud">Reminders</button>
+        <button type="button" class="chip" data-filter="mstodo">Microsoft</button>
       </div>
       <label class="toolbar__toggle">
         <input type="checkbox" id="hide-completed" checked />
         Ocultar completados
       </label>
+      <a href="/auth/microsoft/login" id="ms-connect-btn" class="btn btn--secondary">🔗 Conectar Microsoft</a>
+      <button type="button" id="ms-disconnect-btn" class="btn btn--secondary" hidden>
+        ❌ Desconectar Microsoft
+      </button>
       <button type="button" id="refresh-btn" class="btn btn--secondary">🔄 Actualizar</button>
       <button type="button" id="new-reminder-btn" class="btn btn--primary">➕ Nuevo recordatorio</button>
     </div>
@@ -63,6 +68,13 @@
             Reminders (iCloud)
           </label>
           <select id="icloud-list" disabled></select>
+        </div>
+        <div class="new-reminder-form__destination">
+          <label>
+            <input type="checkbox" id="target-mstodo" />
+            Microsoft To Do
+          </label>
+          <select id="mstodo-list" disabled></select>
         </div>
       </div>
 
