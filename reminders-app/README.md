@@ -1,15 +1,17 @@
 # Recordatorios Unificados
 
 Web app local que muestra en una sola lista tus tareas de **Todoist**, tus
-**Apple Reminders** (iCloud) y tus tareas de **Microsoft To Do**, ordenadas
-por fecha. Microsoft To Do es opcional — la app funciona igual sin conectarlo.
+**Apple Reminders** (iCloud), tus tareas de **Microsoft To Do**, y los
+eventos de tu **calendario de iCloud** — ordenados por fecha. Microsoft To
+Do es opcional; la app funciona igual sin conectarlo.
 
 Apple no ofrece una API web pública para Reminders, así que esta app usa un
 pequeño servidor Node/Express que:
 
 - Llama a la **API REST de Todoist** con tu token personal.
-- Se conecta a **iCloud vía CalDAV** (el mismo protocolo que usa la app
-  Reminders de Apple) para leer tus listas de recordatorios.
+- Se conecta a **iCloud vía CalDAV** (el mismo protocolo que usa las apps
+  Reminders y Calendario de Apple) para leer tus recordatorios y tus
+  eventos de calendario (próximos 60 días).
 - Llama a **Microsoft Graph** (API de Microsoft To Do) usando OAuth, si
   conectaste tu cuenta de Microsoft desde el botón de la app.
 
@@ -114,15 +116,17 @@ navegador (no borra nada de tu cuenta de Microsoft).
 ## Funcionalidad
 
 - Lista combinada de tareas de Todoist, recordatorios de Reminders (de una o
-  varias cuentas de iCloud) y, si conectaste tu cuenta, tareas de Microsoft
-  To Do — agrupada por fecha: **Vencidos, Hoy, Mañana, Esta semana, Más
-  adelante y Sin fecha** (en ese orden), y ordenada por fecha dentro de cada
-  grupo.
+  varias cuentas de iCloud), eventos de tu calendario de iCloud y, si
+  conectaste tu cuenta, tareas de Microsoft To Do — agrupada por fecha:
+  **Vencidos, Hoy, Mañana, Esta semana, Más adelante y Sin fecha** (en ese
+  orden), y ordenada por fecha dentro de cada grupo. Dentro de cada grupo,
+  los eventos de calendario se muestran separados de los recordatorios
+  (sección "📆 Eventos" y "✅ Recordatorios").
 - Buscador de texto (por título o notas, sin distinguir mayúsculas ni tildes).
-- Filtros por fuente (Todoist / Reminders / Microsoft / Todos) y opción para
-  ocultar recordatorios completados — ambos se recuerdan entre sesiones
-  (guardados en el navegador con `localStorage`), así no hay que
-  reconfigurarlos cada vez que abrís la app.
+- Filtros por fuente (Todoist / Reminders / Microsoft / Calendario / Todos)
+  y opción para ocultar recordatorios completados — ambos se recuerdan
+  entre sesiones (guardados en el navegador con `localStorage`), así no hay
+  que reconfigurarlos cada vez que abrís la app.
 - Botón de actualizar para volver a consultar todas las fuentes.
 - Casillero para marcar un recordatorio como completado (o reabrirlo) desde
   la lista unificada — el cambio se sincroniza con Todoist, iCloud o
@@ -153,6 +157,16 @@ navegador (no borra nada de tu cuenta de Microsoft).
   guardado en el `localStorage` de tu navegador (no en el servidor). Si
   cambiás de navegador o de dispositivo, o borrás los datos del sitio,
   hace falta volver a conectar con el botón "Conectar Microsoft".
+
+## Notas sobre el calendario de iCloud
+
+- Es **solo lectura**: los eventos se muestran en la lista, pero no se
+  pueden crear, editar ni completar desde esta app (no tendría mucho
+  sentido "completar" un evento). Para eso seguís usando la app Calendario
+  de tu iPhone/Mac normalmente.
+- Solo trae eventos en un rango razonable: desde una semana atrás hasta 60
+  días adelante, para no traer años de historial de eventos recurrentes
+  antiguos.
 
 ## Desplegar en Render (gratis)
 

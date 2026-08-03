@@ -244,6 +244,109 @@ async function updateIcloudReminder(syncToken, { title, notes, due }) {
   });
 }
 
+// Rango razonable para traer eventos: desde una semana atrás hasta dos meses
+// adelante, para no arrastrar años de historial de eventos recurrentes.
+function getEventTimeRange() {
+  const now = new Date();
+  const start = new Date(now);
+  start.setDate(start.getDate() - 7);
+  const end = new Date(now);
+  end.setDate(end.getDate() + 60);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
+async function fetchAccountEvents(account) {
+  const { username } = account;
+  const client = buildClient(account);
+
+  await client.login();
+
+  const calendars = await client.fetchCalendars();
+  const eventCalendars = calendars.filter((calendar) =>
+    (calendar.components || []).includes("VEVENT")
+  );
+
+  const accountLabel = username.split("@")[0];
+  const timeRange = getEventTimeRange();
+  const events = [];
+
+  for (const calendar of eventCalendars) {
+    const objects = await client.fetchCalendarObjects({
+      calendar,
+      timeRange,
+      expand: true,
+    });
+
+    for (const object of objects) {
+      if (!object.data) continue;
+
+      let vevents;
+      try {
+        const jcalData = ICAL.parse(object.data);
+        const component = new ICAL.Component(jcalData);
+        vevents = component.getAllSubcomponents("vevent");
+      } catch (err) {
+        continue;
+      }
+
+      for (const vevent of vevents) {
+        const startProp = vevent.getFirstProperty("dtstart");
+        if (!startProp) continue;
+
+        const startValue = startProp.getFirstValue();
+        const isAllDay = startValue.isDate;
+        const start = startValue.toJSDate().toISOString();
+
+        const endProp = vevent.getFirstProperty("dtend");
+        const end = endProp ? endProp.getFirstValue().toJSDate().toISOString() : null;
+
+        events.push({
+          id: `icloud-event-${username}-${vevent.getFirstPropertyValue("uid")}-${start}`,
+          source: "icloud-event",
+          title: vevent.getFirstPropertyValue("summary") || "(Sin título)",
+          notes: vevent.getFirstPropertyValue("description") || "",
+          due: start,
+          start,
+          end,
+          isAllDay,
+          listName: `${accountLabel} · ${calendar.displayName || "Calendario"}`,
+        });
+      }
+    }
+  }
+
+  return events;
+}
+
+async function getIcloudCalendarEvents() {
+  const accounts = parseAccounts();
+
+  if (accounts.length === 0) {
+    throw new Error(
+      "Falta configurar al menos una cuenta de iCloud en .env (ICLOUD_ACCOUNTS, o ICLOUD_APPLE_ID/ICLOUD_APP_PASSWORD)."
+    );
+  }
+
+  const results = await Promise.allSettled(accounts.map(fetchAccountEvents));
+
+  const items = [];
+  const errors = [];
+
+  results.forEach((result, index) => {
+    if (result.status === "fulfilled") {
+      items.push(...result.value);
+    } else {
+      errors.push(`${accounts[index].username}: ${result.reason.message}`);
+    }
+  });
+
+  if (items.length === 0 && errors.length > 0) {
+    throw new Error(errors.join(" · "));
+  }
+
+  return { items, errors };
+}
+
 async function getIcloudReminderLists() {
   const accounts = parseAccounts();
   if (accounts.length === 0) return [];
@@ -314,4 +417,5 @@ module.exports = {
   getIcloudReminderLists,
   createIcloudReminder,
   updateIcloudReminder,
+  getIcloudCalendarEvents,
 };

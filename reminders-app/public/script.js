@@ -420,6 +420,16 @@ async function loadReminders() {
       }
     }
 
+    if (data.icloudEvents) {
+      if (data.icloudEvents.ok) {
+        items.push(...data.icloudEvents.items);
+      } else if (data.icloudEvents.error !== data.icloud?.error) {
+        // Si falla por el mismo motivo que Reminders (ej. cuenta no
+        // configurada), no repetimos el mismo mensaje dos veces.
+        errors.push(`Calendario (iCloud): ${data.icloudEvents.error}`);
+      }
+    }
+
     allReminders = items;
 
     if (errors.length) {
@@ -524,18 +534,49 @@ function render() {
     heading.textContent = `${DUE_BUCKET_LABELS[bucketKey]} (${bucketItems.length})`;
     section.appendChild(heading);
 
-    const cardsWrap = document.createElement("div");
-    cardsWrap.className = "reminders-group__cards";
-    for (const item of bucketItems) {
-      cardsWrap.appendChild(buildCard(item));
+    const events = bucketItems.filter((item) => item.source === "icloud-event");
+    const reminders = bucketItems.filter((item) => item.source !== "icloud-event");
+
+    if (events.length > 0) {
+      const subheading = document.createElement("p");
+      subheading.className = "reminders-group__subheading";
+      subheading.textContent = "📆 Eventos";
+      section.appendChild(subheading);
+
+      const eventsWrap = document.createElement("div");
+      eventsWrap.className = "reminders-group__cards";
+      for (const item of events) {
+        eventsWrap.appendChild(buildEventCard(item));
+      }
+      section.appendChild(eventsWrap);
     }
-    section.appendChild(cardsWrap);
+
+    if (reminders.length > 0) {
+      if (events.length > 0) {
+        const subheading = document.createElement("p");
+        subheading.className = "reminders-group__subheading";
+        subheading.textContent = "✅ Recordatorios";
+        section.appendChild(subheading);
+      }
+
+      const cardsWrap = document.createElement("div");
+      cardsWrap.className = "reminders-group__cards";
+      for (const item of reminders) {
+        cardsWrap.appendChild(buildCard(item));
+      }
+      section.appendChild(cardsWrap);
+    }
 
     listEl.appendChild(section);
   }
 }
 
-const SOURCE_LABELS = { todoist: "Todoist", icloud: "Reminders", mstodo: "Microsoft To Do" };
+const SOURCE_LABELS = {
+  todoist: "Todoist",
+  icloud: "Reminders",
+  mstodo: "Microsoft To Do",
+  "icloud-event": "Calendario",
+};
 
 function buildCard(item) {
   const card = document.createElement("article");
@@ -595,6 +636,66 @@ function buildCard(item) {
   card.appendChild(editBtn);
 
   return card;
+}
+
+function buildEventCard(item) {
+  const card = document.createElement("article");
+  card.className = "reminder-card reminder-card--event";
+
+  const dot = document.createElement("span");
+  dot.className = `reminder-card__source reminder-card__source--${item.source}`;
+  card.appendChild(dot);
+
+  const body = document.createElement("div");
+  body.className = "reminder-card__body";
+
+  const title = document.createElement("h3");
+  title.className = "reminder-card__title";
+  title.textContent = item.title;
+  body.appendChild(title);
+
+  const meta = document.createElement("div");
+  meta.className = "reminder-card__meta";
+
+  const badge = document.createElement("span");
+  badge.className = `reminder-card__badge reminder-card__badge--${item.source}`;
+  badge.textContent = SOURCE_LABELS[item.source] || item.source;
+  meta.appendChild(badge);
+
+  const list = document.createElement("span");
+  list.textContent = item.listName;
+  meta.appendChild(list);
+
+  const time = document.createElement("span");
+  time.textContent = "🕑 " + formatEventTime(item);
+  meta.appendChild(time);
+
+  body.appendChild(meta);
+  card.appendChild(body);
+
+  return card;
+}
+
+function formatEventTime(item) {
+  if (item.isAllDay) {
+    return "Todo el día · " + formatDate(item.start, true);
+  }
+
+  const startLabel = new Date(item.start).toLocaleString("es-UY", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  if (!item.end) return startLabel;
+
+  const endLabel = new Date(item.end).toLocaleString("es-UY", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return `${startLabel}–${endLabel}`;
 }
 
 async function toggleCompleted(item, checkbox) {
