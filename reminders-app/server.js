@@ -17,6 +17,7 @@ const {
   getIcloudReminderLists,
   createIcloudReminder,
   updateIcloudReminder,
+  getIcloudCalendarEvents,
 } = require("./src/icloudReminders");
 const {
   isMicrosoftConfigured,
@@ -110,10 +111,11 @@ app.get("/auth/microsoft/callback", async (req, res) => {
 app.get("/api/reminders", async (req, res) => {
   const msRefreshToken = getMsRefreshToken(req);
 
-  const [todoist, icloud, mstodo] = await Promise.allSettled([
+  const [todoist, icloud, mstodo, icloudEvents] = await Promise.allSettled([
     getTodoistTasks(),
     getIcloudReminders(),
     msRefreshToken ? getMicrosoftTasks(msRefreshToken) : Promise.resolve(null),
+    getIcloudCalendarEvents(),
   ]);
 
   const response = {
@@ -125,6 +127,10 @@ app.get("/api/reminders", async (req, res) => {
       icloud.status === "fulfilled"
         ? { ok: true, items: icloud.value.items, warnings: icloud.value.errors }
         : { ok: false, error: icloud.reason.message },
+    icloudEvents:
+      icloudEvents.status === "fulfilled"
+        ? { ok: true, items: icloudEvents.value.items, warnings: icloudEvents.value.errors }
+        : { ok: false, error: icloudEvents.reason.message },
   };
 
   if (msRefreshToken) {

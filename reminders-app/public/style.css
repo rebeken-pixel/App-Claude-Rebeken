@@ -11,6 +11,7 @@
   --color-todoist: #e44332;
   --color-icloud: #147efb;
   --color-mstodo: #0078d4;
+  --color-event: #7c5cbf;
   --radius: 12px;
   --shadow: 0 4px 16px rgba(44, 36, 32, 0.08);
 }
@@ -274,6 +275,15 @@ body {
   color: var(--color-primary-dark);
 }
 
+.reminders-group__subheading {
+  margin: 4px 0 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  padding-left: 2px;
+}
+
 .reminder-card {
   display: flex;
   align-items: flex-start;
@@ -343,6 +353,10 @@ body {
   background: var(--color-mstodo);
 }
 
+.reminder-card__source--icloud-event {
+  background: var(--color-event);
+}
+
 .reminder-card__body {
   flex: 1;
   min-width: 0;
@@ -381,6 +395,10 @@ body {
 
 .reminder-card__badge--mstodo {
   background: var(--color-mstodo);
+}
+
+.reminder-card__badge--icloud-event {
+  background: var(--color-event);
 }
 
 .empty-state {
